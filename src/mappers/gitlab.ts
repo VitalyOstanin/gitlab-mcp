@@ -64,6 +64,7 @@ export interface MappedProject {
   pathWithNamespace: string;
   description: string | null;
   lastActivityAt: string;
+  archived: boolean;
   webUrl?: string;
 }
 
@@ -207,6 +208,7 @@ export function mapProject(project: GitLabProject, options: { webUrl?: string } 
     pathWithNamespace: project.path_with_namespace,
     description: project.description,
     lastActivityAt: formatDatetime(project.last_activity_at) ?? project.last_activity_at,
+    archived: project.archived,
     webUrl: options.webUrl,
   };
 

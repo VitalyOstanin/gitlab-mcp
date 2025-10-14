@@ -86,7 +86,7 @@ export class GitlabMcpServer {
     // Projects
     this.gitlabMcpServer.tool(
       "gitlab_projects",
-      "List available GitLab projects with optional filters. Use for: Browsing projects, filtering by membership, searching by name/path. Returns: Project list with names, paths, and URLs. Supports pagination (default 50, max 100 per page).",
+      "List available GitLab projects with optional filters. Use for: Browsing projects, filtering by membership or archive status, searching by name/path. Returns: Project list with names, paths, archive status, and URLs. Archive filter: true = archived only, false = active only, omit = all. Supports pagination (default 50, max 100 per page).",
       gitlabProjectsArgs,
       async (args) => gitlabProjectsHandler(this.client, args),
     );

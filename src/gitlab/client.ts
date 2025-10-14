@@ -43,6 +43,7 @@ export interface GitLabProject {
   path_with_namespace: string;
   description: string | null;
   last_activity_at: string;
+  archived: boolean;
 }
 
 export interface GitLabProjectTag {
@@ -130,6 +131,7 @@ export interface GitLabProjectFilter extends GitLabPagination {
   owned?: boolean;
   simple?: boolean;
   search?: string;
+  archived?: boolean;
   orderBy?: "created_at" | "updated_at" | "last_activity_at";
   sort?: "asc" | "desc";
 }
@@ -414,6 +416,7 @@ export class GitLabClient {
     const filters = {
       membership: options.membership ?? this.config.filters.includeMembershipOnly,
       simple: options.simple ?? true,
+      archived: options.archived,
       order_by: options.orderBy ?? "last_activity_at",
       sort: options.sort ?? "desc",
       per_page: pagination.perPage,

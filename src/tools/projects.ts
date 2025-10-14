@@ -7,6 +7,10 @@ import { toolError, toolSuccess } from "../utils/tool-response.js";
 export const gitlabProjectsArgs = {
   search: z.string().optional().describe("Filter projects by name, path, or description (optional, for basic filtering)"),
   membership: z.boolean().optional().describe("Show only projects where current user is a member (optional)"),
+  archived: z
+    .boolean()
+    .optional()
+    .describe("Filter by archive status: true = only archived projects, false = only active projects, omit = all projects (optional)"),
   page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
   perPage: z.number().int().min(1).max(100).optional().describe("Number of projects per page (default: 50, max: 100)"),
 };
@@ -21,6 +25,7 @@ export async function gitlabProjectsHandler(client: GitLabClient, rawInput?: unk
     const result = await client.getProjects({
       search: input.search,
       membership: input.membership,
+      archived: input.archived,
       page: input.page,
       perPage: input.perPage,
     });

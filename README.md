@@ -130,7 +130,7 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
 | Tool | Description |
 | --- | --- |
 | `service_info` | Returns GitLab connection status and active filters. |
-| `gitlab_projects` | List available projects with pagination and search. |
+| `gitlab_projects` | List available projects with pagination, search, and archive filters. |
 | `gitlab_project_details` | Get project details by ID or namespace. |
 | `gitlab_project_tags` | List project tags with SemVer-based next release tag calculation and pre-filled creation URL. |
 | `gitlab_project_tag_create` | Create a new tag in a project repository (requires write access). |
@@ -195,7 +195,7 @@ env = {
 
 #### Projects Tools
 
-- **`gitlab_projects`**: List available projects with optional filters (membership, basic search). Uses `/api/v4/projects` endpoint. **Use for**: Browsing available projects, listing projects where you are a member.
+- **`gitlab_projects`**: List available projects with optional filters (membership, archive status, basic search). Uses `/api/v4/projects` endpoint. **Use for**: Browsing available projects, listing active projects only (`archived: false`), or inspecting archived repositories (`archived: true`). Returns each project with `archived` flag alongside other metadata.
 
 - **`gitlab_projects_search`**: Search for specific projects by keywords using GitLab Search API. Uses `/api/v4/search?scope=projects` endpoint. **Use for**: Finding specific projects by name or path (e.g., "telegram/service").
 

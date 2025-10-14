@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import packageJson from "../package.json" with { type: "json" };
 
 import { GitLabClient } from "./gitlab/index.js";
 import { toolError, toolSuccess } from "./utils/tool-response.js";
@@ -28,12 +29,20 @@ import { gitlabLatestPipelineHandler, gitlabLatestPipelineArgs } from "./tools/l
 export class GitlabMcpServer {
   private readonly gitlabMcpServer: McpServer;
   private readonly client: GitLabClient;
+  private readonly version: string;
 
   constructor() {
+    const packageVersion = packageJson.version;
+
+    if (typeof packageVersion !== "string") {
+      throw new Error("package.json version must be a string");
+    }
+
+    this.version = packageVersion;
     this.gitlabMcpServer = new McpServer(
       {
         name: "gitlab-mcp",
-        version: "0.1.1",
+        version: this.version,
       },
       {
         capabilities: {
@@ -72,6 +81,7 @@ export class GitlabMcpServer {
             tokenPresent: Boolean(config.gitlab.token),
             timezone: config.timezone,
             filters: config.filters,
+            version: this.version,
           });
 
           return result;

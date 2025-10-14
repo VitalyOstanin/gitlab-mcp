@@ -12,11 +12,27 @@ const mergeRequestFilterSchema = z.object({
   state: z.enum(["opened", "closed", "merged", "all"]).default("all"),
   updatedAfter: z.string().datetime().optional(),
   updatedBefore: z.string().datetime().optional(),
+  targetBranch: z.string().optional(),
 });
 
 export interface GitLabPagination {
   page?: number;
   perPage?: number;
+}
+
+export interface PaginationInfo {
+  page: number;
+  perPage: number;
+  total?: number;
+  totalPages?: number;
+  nextPage?: number;
+  prevPage?: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T;
+  pagination: PaginationInfo;
 }
 
 export interface GitLabProject {
@@ -49,6 +65,8 @@ export interface GitLabMergeRequest {
   created_at: string;
   updated_at: string;
   merged_at: string | null;
+  source_branch: string;
+  target_branch: string;
   author: {
     name: string;
     username: string;
@@ -60,6 +78,52 @@ export interface GitLabMergeRequest {
   web_url: string;
 }
 
+export interface GitLabUser {
+  id: number;
+  username: string;
+  name: string;
+  email?: string;
+  state: "active" | "blocked";
+  avatar_url?: string;
+  web_url: string;
+  created_at: string;
+  is_admin?: boolean;
+  bio?: string;
+  location?: string;
+  public_email?: string;
+  organization?: string;
+  last_activity_on?: string;
+  last_sign_in_at?: string;
+  confirmed_at?: string;
+  linkedin?: string;
+  twitter?: string;
+  website_url?: string;
+  note?: string;
+}
+
+export interface GitLabCurrentUser extends GitLabUser {
+  private_profile?: boolean;
+  can_create_group?: boolean;
+  can_create_project?: boolean;
+  two_factor_enabled?: boolean;
+  identities?: Array<{
+    provider: string;
+    extern_uid: string;
+  }>;
+}
+
+export interface GitLabMember {
+  id: number;
+  username: string;
+  name: string;
+  email?: string;
+  state: "active" | "blocked";
+  avatar_url?: string;
+  web_url: string;
+  access_level: number;
+  expires_at?: string | null;
+}
+
 export interface GitLabProjectFilter extends GitLabPagination {
   membership?: boolean;
   owned?: boolean;
@@ -67,6 +131,14 @@ export interface GitLabProjectFilter extends GitLabPagination {
   search?: string;
   orderBy?: "created_at" | "updated_at" | "last_activity_at";
   sort?: "asc" | "desc";
+}
+
+export interface GitLabUserFilter extends GitLabPagination {
+  search?: string;
+  username?: string;
+  active?: boolean;
+  blocked?: boolean;
+  external?: boolean;
 }
 
 export interface GitLabError {
@@ -83,7 +155,37 @@ interface GetMergeRequestsOptions {
   pagination?: z.infer<typeof paginationSchema>;
 }
 
+interface SearchMergeRequestsOptions {
+  projectId?: number;
+  query: string;
+  state?: "opened" | "closed" | "merged" | "all";
+  targetBranch?: string;
+  pagination?: GitLabPagination;
+}
+
+interface SearchProjectsOptions {
+  query: string;
+  pagination?: GitLabPagination;
+}
+
+interface GetProjectMembersOptions extends GitLabPagination {
+  includeInherited?: boolean;
+}
+
+interface GetGroupMembersOptions extends GitLabPagination {
+  includeInherited?: boolean;
+}
+
 export class GitLabClient {
+  private static readonly RETRY_CONFIG = {
+    MAX_RETRIES: 3,
+    BACKOFF_FACTOR: 2,
+    MIN_TIMEOUT_MS: 300,
+  } as const;
+
+  private static readonly MERGE_REQUEST_FRESHNESS_THRESHOLD_HOURS = 24;
+  private static readonly MS_PER_HOUR = 1000 * 60 * 60;
+
   private readonly axios: AxiosInstance;
   private readonly config: Config;
 
@@ -98,16 +200,18 @@ export class GitLabClient {
   }
 
   private async request<T>(fn: () => Promise<T>): Promise<T> {
-    return pRetry(fn, {
-      retries: 3,
-      factor: 2,
-      minTimeout: 300,
+    const result = await pRetry(fn, {
+      retries: GitLabClient.RETRY_CONFIG.MAX_RETRIES,
+      factor: GitLabClient.RETRY_CONFIG.BACKOFF_FACTOR,
+      minTimeout: GitLabClient.RETRY_CONFIG.MIN_TIMEOUT_MS,
       onFailedAttempt: (error) => {
         const baseMessage = error instanceof AxiosError ? this.describeAxiosError(error) : error.message;
 
         process.stderr.write(`GitLab request failed (${error.attemptNumber}/${error.retriesLeft} left): ${baseMessage}\n`);
       },
     });
+
+    return result;
   }
 
   private describeAxiosError(error: AxiosError): string {
@@ -122,7 +226,37 @@ export class GitLabClient {
     return error.message;
   }
 
-  async getProjects(options: GetProjectsOptions = {}): Promise<GitLabProject[]> {
+  private extractPaginationInfo(headers: Record<string, string>, page: number, perPage: number): PaginationInfo {
+    const total = headers["x-total"] ? Number.parseInt(headers["x-total"]) : undefined;
+    const totalPages = headers["x-total-pages"] ? Number.parseInt(headers["x-total-pages"]) : undefined;
+    const nextPage = headers["x-next-page"] ? Number.parseInt(headers["x-next-page"]) : undefined;
+    const prevPage = headers["x-prev-page"] ? Number.parseInt(headers["x-prev-page"]) : undefined;
+    const paginationInfo = {
+      page,
+      perPage,
+      total,
+      totalPages,
+      nextPage,
+      prevPage,
+      hasMore: nextPage !== undefined && !Number.isNaN(nextPage),
+    };
+
+    return paginationInfo;
+  }
+
+  private filterProjectsByNamespace(projects: GitLabProject[], namespaceWhitelist: string[]): GitLabProject[] {
+    if (!namespaceWhitelist.length) {
+      return projects;
+    }
+
+    const filtered = projects.filter((project) =>
+      namespaceWhitelist.some((namespace) => project.path_with_namespace.startsWith(namespace)),
+    );
+
+    return filtered;
+  }
+
+  async getProjects(options: GetProjectsOptions = {}): Promise<PaginatedResponse<GitLabProject[]>> {
     const pagination = paginationSchema.parse({
       perPage: options.perPage,
       page: options.page,
@@ -141,24 +275,24 @@ export class GitLabClient {
         params: filters,
       }),
     );
-    const projects = response.data;
+    const { data: projects, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
     const namespaceWhitelist = options.namespaceWhitelist ?? this.config.filters.includeNamespaces;
+    const filtered = this.filterProjectsByNamespace(projects, namespaceWhitelist);
+    const result = { data: filtered, pagination: paginationInfo };
 
-    if (!namespaceWhitelist.length) {
-      return projects;
-    }
-
-    return projects.filter((project) => namespaceWhitelist.some((namespace) => project.path_with_namespace.startsWith(namespace)));
+    return result;
   }
 
   async getProject(identifier: number | string): Promise<GitLabProject> {
     const projectId = typeof identifier === "number" ? identifier : encodeURIComponent(identifier);
     const response = await this.request(() => this.axios.get<GitLabProject>(`/api/v4/projects/${projectId}`));
+    const project = response.data;
 
-    return response.data;
+    return project;
   }
 
-  async getProjectTags(projectId: number, pagination: GitLabPagination = {}): Promise<GitLabProjectTag[]> {
+  async getProjectTags(projectId: number, pagination: GitLabPagination = {}): Promise<PaginatedResponse<GitLabProjectTag[]>> {
     const parsed = paginationSchema.parse(pagination);
     const response = await this.request(() =>
       this.axios.get<GitLabProjectTag[]>(`/api/v4/projects/${projectId}/repository/tags`, {
@@ -170,11 +304,14 @@ export class GitLabClient {
         },
       }),
     );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, parsed.page, parsed.perPage);
+    const result = { data, pagination: paginationInfo };
 
-    return response.data;
+    return result;
   }
 
-  async getMergeRequests(projectId: number, options: GetMergeRequestsOptions = {}): Promise<GitLabMergeRequest[]> {
+  async getMergeRequests(projectId: number, options: GetMergeRequestsOptions = {}): Promise<PaginatedResponse<GitLabMergeRequest[]>> {
     const filters = mergeRequestFilterSchema.parse(options.filters ?? {});
     const pagination = paginationSchema.parse(options.pagination ?? {});
     const response = await this.request(() =>
@@ -183,50 +320,283 @@ export class GitLabClient {
           state: filters.state,
           updated_after: filters.updatedAfter,
           updated_before: filters.updatedBefore,
+          target_branch: filters.targetBranch,
           per_page: pagination.perPage,
           page: pagination.page,
           order_by: "updated_at",
         },
       }),
     );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data, pagination: paginationInfo };
 
-    return response.data;
+    return result;
   }
 
   async getMergeRequest(projectId: number, iid: number): Promise<GitLabMergeRequest> {
     const response = await this.request(() => this.axios.get<GitLabMergeRequest>(`/api/v4/projects/${projectId}/merge_requests/${iid}`));
+    const mergeRequest = response.data;
 
-    return response.data;
+    return mergeRequest;
+  }
+
+  async searchMergeRequests(options: SearchMergeRequestsOptions): Promise<PaginatedResponse<GitLabMergeRequest[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    const params: Record<string, unknown> = {
+      scope: "merge_requests",
+      search: options.query,
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+
+    if (options.projectId) {
+      params.project_id = options.projectId;
+    }
+
+    if (options.state && options.state !== "all") {
+      params.state = options.state;
+    }
+
+    if (options.targetBranch) {
+      params.target_branch = options.targetBranch;
+    }
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabMergeRequest[]>("/api/v4/search", {
+        params,
+      }),
+    );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async searchProjects(options: SearchProjectsOptions): Promise<PaginatedResponse<GitLabProject[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    const params: Record<string, unknown> = {
+      scope: "projects",
+      search: options.query,
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+    const response = await this.request(() =>
+      this.axios.get<GitLabProject[]>("/api/v4/search", {
+        params,
+      }),
+    );
+    const { data: projects, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    // Apply namespace whitelist filter
+    const namespaceWhitelist = this.config.filters.includeNamespaces;
+    const filtered = this.filterProjectsByNamespace(projects, namespaceWhitelist);
+    const result = { data: filtered, pagination: paginationInfo };
+
+    return result;
+  }
+
+  private getBaseUrl(): URL {
+    const baseUrl = new URL(this.config.gitlab.url);
+
+    return baseUrl;
   }
 
   createTagCreationUrl(projectPath: string, tagName: string, ref = "master"): string {
-    const baseUrl = this.config.gitlab.url.replace(/\/?$/, "");
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(`${projectPath}/-/tags/new`, baseUrl);
 
-    return `${baseUrl}/${projectPath}/-/tags/new?tag_name=${encodeURIComponent(tagName)}&ref=${encodeURIComponent(ref)}`;
+    url.searchParams.set("tag_name", tagName);
+    url.searchParams.set("ref", ref);
+
+    const result = url.toString();
+
+    return result;
   }
 
   createMergeRequestUrl(projectPath: string, iid: number | string): string {
-    const baseUrl = this.config.gitlab.url.replace(/\/?$/, "");
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(`${projectPath}/-/merge_requests/${iid}`, baseUrl);
+    const result = url.toString();
 
-    return `${baseUrl}/${projectPath}/-/merge_requests/${iid}`;
+    return result;
   }
 
   createProjectUrl(projectPath: string): string {
-    const baseUrl = this.config.gitlab.url.replace(/\/?$/, "");
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(projectPath, baseUrl);
+    const result = url.toString();
 
-    return `${baseUrl}/${projectPath}`;
+    return result;
   }
 
-  isMergeRequestFresh(mergeRequest: GitLabMergeRequest, thresholdHours = 24): boolean {
+  isMergeRequestFresh(mergeRequest: GitLabMergeRequest, thresholdHours = GitLabClient.MERGE_REQUEST_FRESHNESS_THRESHOLD_HOURS): boolean {
     if (!mergeRequest.merged_at) {
       return true;
     }
 
     const mergedAt = new Date(mergeRequest.merged_at).getTime();
     const now = Date.now();
-    const hoursElapsed = (now - mergedAt) / (1000 * 60 * 60);
+    const hoursElapsed = (now - mergedAt) / GitLabClient.MS_PER_HOUR;
+    const isFresh = hoursElapsed <= thresholdHours;
 
-    return hoursElapsed <= thresholdHours;
+    return isFresh;
+  }
+
+  async getUsers(options: GitLabUserFilter = {}): Promise<PaginatedResponse<GitLabUser[]>> {
+    const pagination = paginationSchema.parse({
+      perPage: options.perPage,
+      page: options.page,
+    });
+    const params: Record<string, unknown> = {
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+
+    if (options.search) {
+      params.search = options.search;
+    }
+
+    if (options.username) {
+      params.username = options.username;
+    }
+
+    if (options.active !== undefined) {
+      params.active = options.active;
+    }
+
+    if (options.blocked !== undefined) {
+      params.blocked = options.blocked;
+    }
+
+    if (options.external !== undefined) {
+      params.external = options.external;
+    }
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabUser[]>("/api/v4/users", {
+        params,
+      }),
+    );
+    const { data: users, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data: users, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getUser(userId: number | string): Promise<GitLabUser> {
+    const userIdEncoded = typeof userId === "number" ? userId : encodeURIComponent(userId);
+    const response = await this.request(() => this.axios.get<GitLabUser>(`/api/v4/users/${userIdEncoded}`));
+    const user = response.data;
+
+    return user;
+  }
+
+  async getUsersBatch(userIds: Array<number | string>): Promise<{
+    users: GitLabUser[];
+    notFound: Array<number | string>;
+  }> {
+    const maxBatchSize = 50;
+
+    if (userIds.length > maxBatchSize) {
+      const errorMessage = `Batch size exceeds maximum of ${maxBatchSize} users`;
+
+      throw new Error(errorMessage);
+    }
+
+    // Execute requests in parallel
+    const results = await Promise.allSettled(userIds.map((userId) => this.getUser(userId)));
+    const users: GitLabUser[] = [];
+    const notFound: Array<number | string> = [];
+
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        users.push(result.value);
+      } else {
+        // Check if the error is 404 Not Found
+        const error = result.reason;
+
+        if (error instanceof Error && "response" in error) {
+          const axiosError = error as AxiosError;
+
+          if (axiosError.response?.status === 404) {
+            notFound.push(userIds[index]);
+          } else {
+            // Re-throw other errors
+            throw result.reason;
+          }
+        } else {
+          throw result.reason;
+        }
+      }
+    });
+
+    const batchResult = { users, notFound };
+
+    return batchResult;
+  }
+
+  async getCurrentUser(): Promise<GitLabCurrentUser> {
+    const response = await this.request(() => this.axios.get<GitLabCurrentUser>("/api/v4/user"));
+    const currentUser = response.data;
+
+    return currentUser;
+  }
+
+  async getProjectMembers(projectId: number | string, options: GetProjectMembersOptions = {}): Promise<PaginatedResponse<GitLabMember[]>> {
+    const pagination = paginationSchema.parse({
+      perPage: options.perPage,
+      page: options.page,
+    });
+    const projectIdEncoded = typeof projectId === "number" ? projectId : encodeURIComponent(projectId);
+    const includeInherited = options.includeInherited ?? true;
+    const endpoint = includeInherited ? `/api/v4/projects/${projectIdEncoded}/members/all` : `/api/v4/projects/${projectIdEncoded}/members`;
+    const response = await this.request(() =>
+      this.axios.get<GitLabMember[]>(endpoint, {
+        params: {
+          per_page: pagination.perPage,
+          page: pagination.page,
+        },
+      }),
+    );
+    const { data: members, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data: members, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getGroupMembers(groupId: number | string, options: GetGroupMembersOptions = {}): Promise<PaginatedResponse<GitLabMember[]>> {
+    const pagination = paginationSchema.parse({
+      perPage: options.perPage,
+      page: options.page,
+    });
+    const groupIdEncoded = typeof groupId === "number" ? groupId : encodeURIComponent(groupId);
+    const includeInherited = options.includeInherited ?? true;
+    const endpoint = includeInherited ? `/api/v4/groups/${groupIdEncoded}/members/all` : `/api/v4/groups/${groupIdEncoded}/members`;
+    const response = await this.request(() =>
+      this.axios.get<GitLabMember[]>(endpoint, {
+        params: {
+          per_page: pagination.perPage,
+          page: pagination.page,
+        },
+      }),
+    );
+    const { data: members, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data: members, pagination: paginationInfo };
+
+    return result;
+  }
+
+  createUserUrl(username: string): string {
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(username, baseUrl);
+    const result = url.toString();
+
+    return result;
   }
 
   getConfig(): Config {

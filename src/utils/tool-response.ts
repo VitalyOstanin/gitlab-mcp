@@ -6,16 +6,17 @@ export function toolSuccess<T>(payload: T): CallToolResult {
     success: true,
     payload,
   } satisfies Record<string, unknown>;
-
-  return {
+  const result = {
     content: [
       {
-        type: "text",
+        type: "text" as const,
         text: JSON.stringify(structuredContent, null, 2),
       },
     ],
     structuredContent,
   };
+
+  return result;
 }
 
 export function toolError(error: unknown): CallToolResult {
@@ -28,12 +29,13 @@ export function toolError(error: unknown): CallToolResult {
         details: error.flatten(),
       },
     } as Record<string, unknown>;
-
-    return {
+    const result = {
       content: [],
       isError: true,
       structuredContent,
     };
+
+    return result;
   }
 
   if (error instanceof Error) {
@@ -44,12 +46,13 @@ export function toolError(error: unknown): CallToolResult {
         message: error.message,
       },
     } as Record<string, unknown>;
-
-    return {
+    const result = {
       content: [],
       isError: true,
       structuredContent,
     };
+
+    return result;
   }
 
   const structuredContent = {
@@ -60,10 +63,11 @@ export function toolError(error: unknown): CallToolResult {
       details: error,
     },
   } as Record<string, unknown>;
-
-  return {
+  const result = {
     content: [],
     isError: true,
     structuredContent,
   };
+
+  return result;
 }

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { GitLabServer } from "./src/server.js";
+import { GitlabMcpServer } from "./src/server.js";
 
 async function main() {
   const transport = new StdioServerTransport();
-  const server = new GitLabServer();
+  const gitlabMcpServer = new GitlabMcpServer();
 
-  await server.connect(transport);
+  await gitlabMcpServer.connect(transport);
 }
 
 main().catch((error) => {

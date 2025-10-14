@@ -4,9 +4,11 @@ import type { GitLabClient } from "../gitlab/index.js";
 import { mapProject } from "../mappers/gitlab.js";
 import { toolError, toolSuccess } from "../utils/tool-response.js";
 
-export const gitlabProjectDetailsSchema = z.object({
-  project: z.union([z.string(), z.number()]),
-});
+export const gitlabProjectDetailsArgs = {
+  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
+};
+
+export const gitlabProjectDetailsSchema = z.object(gitlabProjectDetailsArgs);
 
 export async function gitlabProjectDetailsHandler(client: GitLabClient, rawInput: unknown) {
   const input = gitlabProjectDetailsSchema.parse(rawInput);
@@ -16,8 +18,7 @@ export async function gitlabProjectDetailsHandler(client: GitLabClient, rawInput
     const mapped = mapProject(project, {
       webUrl: client.createProjectUrl(project.path_with_namespace),
     });
-
-    return toolSuccess({
+    const successResult = toolSuccess({
       payload: {
         project: {
           ...mapped,
@@ -26,7 +27,11 @@ export async function gitlabProjectDetailsHandler(client: GitLabClient, rawInput
       summary: `Project ${mapped.pathWithNamespace}`,
       fallbackText: `Project ${mapped.pathWithNamespace} → ${mapped.webUrl ?? "(no URL)"}`,
     });
+
+    return successResult;
   } catch (error) {
-    return toolError(error);
+    const errorResult = toolError(error);
+
+    return errorResult;
   }
 }

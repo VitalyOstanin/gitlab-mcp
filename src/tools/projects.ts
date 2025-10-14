@@ -6,25 +6,26 @@ import { toolError, toolSuccess } from "../utils/tool-response.js";
 
 export const gitlabProjectsSchema = z
   .object({
-    search: z.string().optional(),
-    membership: z.boolean().optional(),
-    page: z.number().int().min(1).optional(),
-    perPage: z.number().int().min(1).max(100).optional(),
+    search: z.string().optional().describe("Filter projects by name, path, or description (optional, for basic filtering)"),
+    membership: z.boolean().optional().describe("Show only projects where current user is a member (optional)"),
+    page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
+    perPage: z.number().int().min(1).max(100).optional().describe("Number of projects per page (default: 50, max: 100)"),
   })
-  .optional();
+  .optional()
+  .describe("List available GitLab projects with optional filters. Use for browsing projects.");
 
 export async function gitlabProjectsHandler(client: GitLabClient, rawInput?: unknown) {
   const parsed = gitlabProjectsSchema.parse(rawInput ?? {});
   const input = parsed ?? {};
 
   try {
-    const projects = await client.getProjects({
+    const result = await client.getProjects({
       search: input.search,
       membership: input.membership,
       page: input.page,
       perPage: input.perPage,
     });
-    const mapped = projects.map((project) =>
+    const mapped = result.data.map((project) =>
       mapProject(project, {
         webUrl: client.createProjectUrl(project.path_with_namespace),
       }),
@@ -32,8 +33,7 @@ export async function gitlabProjectsHandler(client: GitLabClient, rawInput?: unk
     const payload = {
       projects: mapped,
       pagination: {
-        page: input.page ?? 1,
-        perPage: input.perPage ?? 50,
+        ...result.pagination,
         count: mapped.length,
       },
     } as const;
@@ -43,13 +43,16 @@ export async function gitlabProjectsHandler(client: GitLabClient, rawInput?: unk
         `${project.pathWithNamespace} — ${project.name}${project.webUrl ? ` (${project.webUrl})` : ""}`,
       ),
     ];
-
-    return toolSuccess({
+    const successResult = toolSuccess({
       payload,
-      summary: `Fetched ${payload.projects.length} projects`,
+      summary: `Fetched ${payload.projects.length} projects${payload.pagination.hasMore ? " (more available)" : ""}`,
       fallbackText: fallbackLines.join("\n"),
     });
+
+    return successResult;
   } catch (error) {
-    return toolError(error);
+    const errorResult = toolError(error);
+
+    return errorResult;
   }
 }

@@ -4,11 +4,13 @@ import type { GitLabClient } from "../gitlab/index.js";
 import { mapMergeRequest } from "../mappers/gitlab.js";
 import { toolError, toolSuccess } from "../utils/tool-response.js";
 
-export const gitlabMergeRequestDetailsSchema = z.object({
-  project: z.union([z.string(), z.number()]),
-  iid: z.number().int().min(1),
-  forceRefresh: z.boolean().optional(),
-});
+export const gitlabMergeRequestDetailsArgs = {
+  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
+  iid: z.number().int().min(1).describe("Merge request IID (internal ID)"),
+  forceRefresh: z.boolean().optional().describe("Force refresh cached data"),
+};
+
+export const gitlabMergeRequestDetailsSchema = z.object(gitlabMergeRequestDetailsArgs);
 
 export async function gitlabMergeRequestDetailsHandler(client: GitLabClient, rawInput: unknown) {
   const input = gitlabMergeRequestDetailsSchema.parse(rawInput);
@@ -19,8 +21,7 @@ export async function gitlabMergeRequestDetailsHandler(client: GitLabClient, raw
     const isFresh = client.isMergeRequestFresh(mergeRequest);
     const mapped = { ...mapMergeRequest(mergeRequest), fresh: isFresh };
     const url = client.createMergeRequestUrl(project.path_with_namespace, mergeRequest.iid);
-
-    return toolSuccess({
+    const successResult = toolSuccess({
       payload: {
         project: project.path_with_namespace,
         mergeRequest: {
@@ -31,7 +32,11 @@ export async function gitlabMergeRequestDetailsHandler(client: GitLabClient, raw
       summary: `MR !${mergeRequest.iid} (${mergeRequest.state})`,
       fallbackText: `MR !${mergeRequest.iid} (${mergeRequest.state}) → ${url}`,
     });
+
+    return successResult;
   } catch (error) {
-    return toolError(error);
+    const errorResult = toolError(error);
+
+    return errorResult;
   }
 }

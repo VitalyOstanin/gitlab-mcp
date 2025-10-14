@@ -23,12 +23,12 @@ export function loadConfig(force = false): Config {
   const envParsed = environmentSchema.safeParse({ url: rawUrl, token: rawToken });
 
   if (!envParsed.success) {
-    throw new Error(
-      `Invalid GitLab environment configuration. Ensure GITLAB_URL and GITLAB_TOKEN are set correctly: ${envParsed.error.message}`,
-    );
+    const errorMessage = `Invalid GitLab environment configuration. Ensure GITLAB_URL and GITLAB_TOKEN are set correctly: ${envParsed.error.message}`;
+
+    throw new Error(errorMessage);
   }
 
-  cachedConfig = {
+  const config = {
     gitlab: {
       url: envParsed.data.url,
       token: envParsed.data.token,
@@ -38,6 +38,8 @@ export function loadConfig(force = false): Config {
       includeNamespaces: [],
     },
   } satisfies Config;
+
+  cachedConfig = config;
 
   return cachedConfig;
 }

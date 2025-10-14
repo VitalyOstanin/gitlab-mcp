@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write  # Required for creating GitHub releases
       id-token: write  # Required for npm provenance
 
     steps:
@@ -43,22 +43,18 @@ jobs:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     - name: Create GitHub Release
-      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
-        body: |
-          🚀 New release of GitLab MCP Server
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release create ${{ github.ref_name }} \
+          --title "Release ${{ github.ref_name }}" \
+          --notes "🚀 New release of GitLab MCP Server
 
-          **Package**: `@vitalyostanin/gitlab-mcp@${{ github.ref_name }}`
+        **Package**: \`@vitalyostanin/gitlab-mcp@${{ github.ref_name }}\`
 
-          Install with:
-          ```bash
-          npm install @vitalyostanin/gitlab-mcp@${{ github.ref_name }}
-          ```
+        Install with:
+        \`\`\`bash
+        npm install @vitalyostanin/gitlab-mcp@${{ github.ref_name }}
+        \`\`\`
 
-          See [CHANGELOG](https://github.com/VitalyOstanin/gitlab-mcp/blob/${{ github.ref_name }}/README.md) for details.
-        draft: false
-        prerelease: false
+        See [CHANGELOG](https://github.com/VitalyOstanin/gitlab-mcp/blob/${{ github.ref_name }}/README.md) for details."

@@ -1,7 +1,7 @@
 # GitLab MCP Server
 
 [![CI](https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/ci.yml)
-[![npm version](https://badge.fury.io/js/@vitalyostanin%2Fgitlab-mcp.svg)](https://www.npmjs.com/package/@vitalyostanin/gitlab-mcp)
+[![npm version](https://img.shields.io/npm/v/@vitalyostanin/gitlab-mcp.svg)](https://www.npmjs.com/package/@vitalyostanin/gitlab-mcp)
 
 GitLab MCP server provides tools for working with GitLab projects, merge requests, and tags directly from Claude Code, Code CLI, and other MCP clients.
 

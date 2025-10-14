@@ -2,6 +2,40 @@
 
 This document outlines the complete release procedure for the GitLab MCP project. Follow these steps in order to ensure a clean, validated release.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Pre-Release Checklist](#pre-release-checklist)
+  - [1. Version Update](#1-version-update)
+  - [2. Lock File Update](#2-lock-file-update)
+  - [3. Documentation Updates](#3-documentation-updates)
+  - [4. Build Validation](#4-build-validation)
+  - [5. Linter Validation](#5-linter-validation)
+  - [6. Final Code Review](#6-final-code-review)
+  - [7. Git Status Check](#7-git-status-check)
+- [Release Execution](#release-execution)
+  - [Automated Release via GitHub Actions](#automated-release-via-github-actions)
+  - [Prerequisites](#prerequisites)
+  - [Release Steps](#release-steps)
+  - [Monitor Release Progress](#monitor-release-progress)
+  - [What GitHub Actions Does](#what-github-actions-does)
+- [Post-Release Verification](#post-release-verification)
+
+## Overview
+
+The GitLab MCP project uses **automated CI/CD via GitHub Actions** for releases:
+
+- **CI Workflow**: Automatically runs tests, linting, and builds on every push and PR
+- **Publish Workflow**: Automatically publishes to npm and creates GitHub Release when you push a version tag
+
+**Quick Release (TL;DR):**
+```bash
+npm version patch              # Update version, create commit & tag
+git push --follow-tags        # Push to GitHub → triggers automated release
+```
+
+For detailed instructions and prerequisites, continue reading below.
+
 ## Pre-Release Checklist
 
 ### 1. Version Update
@@ -177,92 +211,145 @@ git commit -m "chore: prepare release v0.x.x"
 
 Once all checklist items are completed:
 
-### 1. Create Git Tag
+### Automated Release via GitHub Actions
+
+This project uses GitHub Actions for automated CI/CD. The release process is fully automated when you create a version tag.
+
+#### Prerequisites
+
+**One-time setup:** Configure NPM_TOKEN in GitHub repository secrets:
+
+1. Generate npm Access Token:
+   - Go to [npmjs.com](https://www.npmjs.com/) and log in
+   - Navigate to **Access Tokens** in your account settings
+   - Click **Generate New Token** → **Classic Token**
+   - Select **Automation** type (for CI/CD)
+   - Copy the generated token
+
+2. Add Secret to GitHub:
+   - Go to your GitHub repository: https://github.com/VitalyOstanin/gitlab-mcp
+   - Navigate to **Settings** → **Secrets and variables** → **Actions**
+   - Click **New repository secret**
+   - Name: `NPM_TOKEN`
+   - Value: Paste your npm token
+   - Click **Add secret**
+
+#### Release Steps
 
 ```bash
-# Create annotated tag with release notes
-git tag -a v0.x.x -m "Release v0.x.x
+# 1. Update version and create git tag
+npm version patch   # for 0.1.0 → 0.1.1 (bug fixes)
+# or
+npm version minor   # for 0.1.0 → 0.2.0 (new features)
+# or
+npm version major   # for 0.1.0 → 1.0.0 (breaking changes)
 
-- Feature summary
-- Fix summary
-- Breaking changes (if any)
-"
+# Note: npm version automatically:
+# - Updates package.json and package-lock.json
+# - Creates a git commit (e.g., "0.1.1")
+# - Creates a git tag (e.g., "v0.1.1")
 
-# Push tag to remote
-git push origin v0.x.x
+# 2. Push commit and tags to GitHub
+git push --follow-tags
+
+# 3. GitHub Actions will automatically:
+#    ✓ Run CI tests (Node.js 20.x, 22.x)
+#    ✓ Build the project
+#    ✓ Publish to npm with provenance
+#    ✓ Create GitHub Release with installation instructions
 ```
 
-### 2. Publish to npm
+#### Monitor Release Progress
 
-```bash
-# Publish to npm registry
-npm publish
-```
+1. **Check GitHub Actions workflow:**
+   - Go to: https://github.com/VitalyOstanin/gitlab-mcp/actions
+   - Look for "Publish to npm" workflow run
+   - Verify all steps completed successfully
 
-### 3. Create GitLab Release
+2. **View created release:**
+   - Go to: https://github.com/VitalyOstanin/gitlab-mcp/releases
+   - Verify release was created with correct version tag
+   - Check release notes and installation instructions
 
-Using GitLab UI or API, create a release:
-- Tag: `v0.x.x`
-- Title: `Release v0.x.x`
-- Description: Copy from CHANGELOG
+#### What GitHub Actions Does
+
+The automated workflow (`.github/workflows/publish.yml`) performs:
+
+1. **Environment Setup**
+   - Checkout repository code
+   - Setup Node.js 20.x with npm cache
+   - Install dependencies with `npm ci`
+
+2. **Build & Validation**
+   - Build project with `npm run build`
+   - Verify package contents with `npm pack --dry-run`
+   - Ensure all required files are included
+
+3. **Publishing**
+   - Publish to npm with `--provenance` flag (cryptographic signature)
+   - Use `--access public` for scoped package visibility
+
+4. **GitHub Release Creation**
+   - Create GitHub Release automatically
+   - Include installation instructions
+   - Link to package on npmjs.com
 
 ## Post-Release Verification
 
-After publishing:
+After publishing, verify the release was successful:
 
-1. **Verify npm package:**
-   ```bash
-   npm view @vitalyostanin/gitlab-mcp version
-   ```
+### 1. Verify GitHub Actions Workflow
 
-2. **Test installation:**
-   ```bash
-   npx @vitalyostanin/gitlab-mcp@latest
-   ```
+```bash
+# Check latest workflow run status via GitHub CLI (optional)
+gh run list --workflow=publish.yml --limit 1
 
-3. **Update documentation links** if package location or usage changed
+# Or visit in browser:
+# https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/publish.yml
+```
 
-## Troubleshooting
+**Expected workflow status:** ✅ All steps completed successfully
 
-### Build Fails
+### 2. Verify npm Package
 
-- Check `tsconfig.json` for configuration issues
-- Verify all imports use correct file extensions (`.js` for compiled output)
-- Ensure `dist/` directory is excluded from source control
+```bash
+# Check published version
+npm view @vitalyostanin/gitlab-mcp version
 
-### Linter Errors
+# Expected output: 0.x.x (matching your release tag)
 
-- Review ESLint configuration in project root
-- Check for rule violations in modified files
-- Use `--fix` flag for auto-fixable issues
+# View full package info
+npm view @vitalyostanin/gitlab-mcp
 
-### npm Publish Fails
+# Check package provenance (cryptographic signature)
+npm view @vitalyostanin/gitlab-mcp --json | grep -i provenance
+```
 
-- Verify npm authentication: `npm whoami`
-- Check version doesn't already exist: `npm view @vitalyostanin/gitlab-mcp versions`
-- Ensure `package.json` has correct `publishConfig.access: "public"`
+### 3. Test Installation
 
-## Release Frequency
+```bash
+# Test fresh installation (in a temporary directory)
+cd $(mktemp -d)
+npx @vitalyostanin/gitlab-mcp@latest
 
-- **Patch releases**: As needed for bug fixes (weekly/biweekly)
-- **Minor releases**: Monthly or when significant features are ready
-- **Major releases**: Quarterly or when breaking changes are necessary
+# Expected: Server should start and show service info
+```
 
-## Rollback Procedure
+### 4. Verify GitHub Release
 
-If a release has critical issues:
+```bash
+# Visit releases page
+# https://github.com/VitalyOstanin/gitlab-mcp/releases/latest
 
-1. **Deprecate broken version:**
-   ```bash
-   npm deprecate @vitalyostanin/gitlab-mcp@0.x.x "Critical bug, use 0.x.y instead"
-   ```
+# Or check via GitHub CLI
+gh release view v0.x.x
+```
 
-2. **Publish hotfix:**
-   - Create hotfix branch from release tag
-   - Apply fixes
-   - Follow full release procedure with patch version
-
-3. **Communicate:** Update README, CHANGELOG, and notify users via GitHub issues
+**Verify:**
+- ✅ Release is published (not draft)
+- ✅ Release notes are properly formatted
+- ✅ Installation instructions are present
+- ✅ Tag matches package version
 
 ---
 

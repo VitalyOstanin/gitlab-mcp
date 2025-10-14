@@ -149,7 +149,9 @@ export function unixMsToDate(timestamp: number): Date {
 }
 
 export function formatDate(value: string | number | Date): string {
-  return toIsoDateString(value);
+  const isoDate = toIsoDateString(value);
+
+  return isoDate;
 }
 
 export function formatDateInTimezone(value: string | number | Date, timezone: string): string {
@@ -196,7 +198,11 @@ export function filterWorkingDates(
 }
 
 export function isSameDay(left: string | number | Date, right: string | number | Date): boolean {
-  return formatDate(left) === formatDate(right);
+  const leftFormatted = formatDate(left);
+  const rightFormatted = formatDate(right);
+  const areEqual = leftFormatted === rightFormatted;
+
+  return areEqual;
 }
 
 export function getCurrentTimestamp(): number {

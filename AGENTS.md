@@ -6,6 +6,19 @@
 - When formatting or refactoring code, default to running `npx eslint --fix` (without dry-run) so lintable issues are auto-corrected early.
 - Maintain `README.md` in English and `README-ru.md` in Russian so both stay aligned with the GitLab MCP feature set.
 
+## Documentation Guidelines
+- **All Markdown files must include a Table of Contents (TOC)** after the main heading and before the first section.
+- TOC should use standard Markdown anchor links (e.g., `[Overview](#overview)`).
+- Include all level 2 (`##`) and level 3 (`###`) headers in the TOC for easy navigation.
+- Update the TOC whenever document structure changes (new sections, renamed headers, etc.).
+- Example TOC format:
+  ```markdown
+  ## Table of Contents
+  - [Section 1](#section-1)
+    - [Subsection 1.1](#subsection-11)
+  - [Section 2](#section-2)
+  ```
+
 ## Project Structure
 - `src/`: TypeScript sources for the MCP server, GitLab client, and tool registrations.
 - `dist/`: Compiled JavaScript emitted by `npm run build` (ignored by git).

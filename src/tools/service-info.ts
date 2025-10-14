@@ -8,8 +8,7 @@ export const serviceInfoSchema = z.object({}).optional();
 export async function serviceInfoHandler(client: GitLabClient) {
   try {
     const config = client.getConfig();
-
-    return toolSuccess({
+    const result = toolSuccess({
       payload: {
         name: "GitLab MCP",
         gitlabUrl: config.gitlab.url,
@@ -18,7 +17,11 @@ export async function serviceInfoHandler(client: GitLabClient) {
       },
       summary: `GitLab: ${config.gitlab.url} (token ${config.gitlab.token ? "present" : "missing"})`,
     });
+
+    return result;
   } catch (error) {
-    return toolError(error);
+    const errorResult = toolError(error);
+
+    return errorResult;
   }
 }

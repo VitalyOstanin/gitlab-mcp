@@ -20,7 +20,7 @@ export async function gitlabProjectTagCreateHandler(client: GitLabClient, rawInp
   const config = client.getConfig();
 
   if (config.readOnly) {
-    return toolError(
+    const errorResult = toolError(
       new Error(
         "Tag creation is disabled in read-only mode. " +
           "To enable tag creation:\n" +
@@ -29,19 +29,23 @@ export async function gitlabProjectTagCreateHandler(client: GitLabClient, rawInp
           "3. Ensure you have at least Developer role in the target project",
       ),
     );
+
+    return errorResult;
   }
 
   // Validate SemVer format
   const cleanTagName = input.tagName.startsWith("v") ? input.tagName.slice(1) : input.tagName;
 
   if (!semver.valid(cleanTagName)) {
-    return toolError(
+    const errorResult = toolError(
       new Error(
         `Invalid tag name: '${input.tagName}'. ` +
           `Tag name must follow SemVer format (e.g., 'v1.2.3' or '1.2.3'). ` +
           `Provided tag does not parse as valid semantic version.`,
       ),
     );
+
+    return errorResult;
   }
 
   try {
@@ -85,12 +89,16 @@ export async function gitlabProjectTagCreateHandler(client: GitLabClient, rawInp
       fallbackLines.push(`Message: ${payload.tag.message}`);
     }
 
-    return toolSuccess({
+    const successResult = toolSuccess({
       payload,
       summary: `Created tag '${tag.name}' in ${project.path_with_namespace} at ${input.ref}`,
       fallbackText: fallbackLines.join("\n"),
     });
+
+    return successResult;
   } catch (error) {
-    return toolError(error);
+    const errorResult = toolError(error);
+
+    return errorResult;
   }
 }

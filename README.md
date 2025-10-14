@@ -151,6 +151,34 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
 
 **Key Difference**: `gitlab_merge_requests` lists MRs for a specific project, while `gitlab_merge_requests_search` finds MRs by text search across projects.
 
+##### Freshness Flag
+
+The **freshness flag** is a boolean field returned by `gitlab_merge_request_details` that indicates whether a merge request is "fresh" or recently merged:
+
+- **For unmerged MRs** (state is `opened` or `closed`): `fresh = true` (always considered fresh)
+- **For merged MRs**:
+  - `fresh = true` — merged within the last **24 hours**
+  - `fresh = false` — merged more than 24 hours ago
+
+**Use cases:**
+- Identify recently merged changes that may need attention
+- Track hot/recent merge activity in a project
+- Filter out older merged MRs when reviewing recent changes
+
+**Example response:**
+```json
+{
+  "mergeRequest": {
+    "id": 123,
+    "iid": 45,
+    "title": "Add new feature",
+    "state": "merged",
+    "mergedAt": "2025-10-13T10:30:00Z",
+    "fresh": true
+  }
+}
+```
+
 #### Users Tools
 
 - **`gitlab_users`**: List all GitLab users with optional filters (active, blocked, search). Returns basic user info including last activity date. **Use for**: Browsing available users, searching users by name or username, monitoring user activity.

@@ -33,6 +33,66 @@
 - Implement pagination for every MCP tool that may return large result sets; every tool must expose explicit pagination parameters and defaults in the schema.
 - Use conservative defaults (≤100 items per page unless the GitLab API enforces a different limit) and document maximum supported sizes.
 
+## MCP Tool Registration
+- **Always use the `.tool()` method** for registering MCP tools instead of `registerTool()`.
+- The `.tool()` method provides better compatibility with Claude Code MCP client and ensures proper parameter parsing.
+
+### Method Signatures
+- **Preferred**: `.tool(name, description, argsObject, handler)`
+  - `name`: Tool name (string)
+  - `description`: Detailed usage description (string)
+  - `argsObject`: Plain object with Zod schema definitions (e.g., `{ param: z.string().describe("...") }`)
+  - `handler`: Async function that receives parsed arguments
+
+- **Avoid**: `registerTool(name, schema, handler)`
+  - This older API wraps args in `z.object()`, which can cause parameter parsing issues with some MCP clients
+
+### Tool File Export Pattern
+Each tool file should export both the args object and a composed schema:
+```typescript
+// ✅ Correct pattern
+export const gitlabPipelinesArgs = {
+  project: z.union([z.string(), z.number()]).describe("Project ID or path"),
+  ref: z.string().optional().describe("Branch name"),
+  // ... other parameters
+};
+
+export const gitlabPipelinesSchema = z.object(gitlabPipelinesArgs);
+
+export async function gitlabPipelinesHandler(client: GitLabClient, rawInput: unknown) {
+  const input = gitlabPipelinesSchema.parse(rawInput);
+  // ... implementation
+}
+```
+
+### Registration Examples
+```typescript
+// ✅ CORRECT: Use .tool() with args object
+import { gitlabPipelinesArgs, gitlabPipelinesHandler } from "./tools/pipelines.js";
+
+this.gitlabMcpServer.tool(
+  "gitlab_pipelines",
+  "List pipelines for a project. Use for: Checking CI/CD status, filtering by branch/status.",
+  gitlabPipelinesArgs,
+  async (args) => gitlabPipelinesHandler(this.client, args),
+);
+
+// ❌ INCORRECT: Using registerTool with schema
+import { gitlabPipelinesSchema, gitlabPipelinesHandler } from "./tools/pipelines.js";
+
+this.gitlabMcpServer.registerTool(
+  "gitlab_pipelines",
+  gitlabPipelinesSchema,
+  async (args) => gitlabPipelinesHandler(this.client, args),
+);
+```
+
+### Why .tool() is Better
+- Direct parameter passing without double-wrapping in `z.object()`
+- Required description field encourages better documentation
+- Consistent parameter structure across all tools
+- Better error messages when parameters are missing or invalid
+
 ## MCP Tool Descriptions & Documentation
 - **All MCP tool descriptions must include usage hints** to help users understand when and how to use each tool effectively.
 - Each tool description should contain:

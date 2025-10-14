@@ -10,6 +10,7 @@ export interface Config {
     includeNamespaces: string[];
   };
   readOnly: boolean;
+  timezone: string;
 }
 
 let cachedConfig: Config | null = null;
@@ -21,7 +22,8 @@ export function loadConfig(force = false): Config {
 
   const rawUrl = process.env.GITLAB_URL;
   const rawToken = process.env.GITLAB_TOKEN;
-  const envParsed = environmentSchema.safeParse({ url: rawUrl, token: rawToken });
+  const rawTimezone = process.env.GITLAB_TIMEZONE;
+  const envParsed = environmentSchema.safeParse({ url: rawUrl, token: rawToken, timezone: rawTimezone });
 
   if (!envParsed.success) {
     const errorMessage = `Invalid GitLab environment configuration. Ensure GITLAB_URL and GITLAB_TOKEN are set correctly: ${envParsed.error.message}`;
@@ -41,6 +43,7 @@ export function loadConfig(force = false): Config {
       includeNamespaces: [],
     },
     readOnly,
+    timezone: envParsed.data.timezone ?? "Europe/Moscow",
   } satisfies Config;
 
   cachedConfig = config;

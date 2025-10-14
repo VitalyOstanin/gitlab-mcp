@@ -5,7 +5,7 @@ import { mapUser } from "../mappers/gitlab.js";
 import { toolError, toolSuccess } from "../utils/tool-response.js";
 
 export const gitlabUserDetailsArgs = {
-  userId: z.union([z.number(), z.string()]).describe("User ID (number) or username (string)"),
+  userId: z.union([z.number(), z.string()]).describe("User ID (number) or username (string). Numeric ID provides faster lookup via direct API call, username requires search query."),
 };
 
 export const gitlabUserDetailsSchema = z.object(gitlabUserDetailsArgs);

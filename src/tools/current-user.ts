@@ -4,12 +4,9 @@ import type { GitLabClient } from "../gitlab/index.js";
 import { mapUser } from "../mappers/gitlab.js";
 import { toolError, toolSuccess } from "../utils/tool-response.js";
 
-export const gitlabCurrentUserSchema = z
-  .object({})
-  .optional()
-  .describe(
-    "Get information about the current user (API token owner). Includes permissions flags and 2FA status. Use for: Verifying authentication, checking current user permissions.",
-  );
+export const gitlabCurrentUserArgs = {};
+
+export const gitlabCurrentUserSchema = z.object(gitlabCurrentUserArgs).optional();
 
 export async function gitlabCurrentUserHandler(client: GitLabClient, rawInput?: unknown) {
   gitlabCurrentUserSchema.parse(rawInput ?? {});
@@ -37,7 +34,7 @@ export async function gitlabCurrentUserHandler(client: GitLabClient, rawInput?: 
       additionalInfo.push("can create groups");
     }
 
-    const infoText = additionalInfo.length > 0 ? ` (${additionalInfo.join(", ")})` : "";
+    const infoText = additionalInfo.length ? ` (${additionalInfo.join(", ")})` : "";
     const successResult = toolSuccess({
       payload: {
         user: {

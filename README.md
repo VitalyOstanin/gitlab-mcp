@@ -21,6 +21,9 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
 - Search merge requests by title and description.
 - List GitLab users with activity tracking and batch operations.
 - Manage project and group members with access level information.
+- Monitor CI/CD pipelines with status filters and date ranges.
+- View pipeline jobs with execution details, artifacts, and runner info.
+- Track build history and analyze job failures across projects.
 
 ## Requirements
 
@@ -32,6 +35,9 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
     - **Write mode** (for tag creation): `api` scope
   - `GITLAB_READ_ONLY` — Optional, defaults to `true` for safety
     - Set to `false` to enable write operations (tag creation)
+  - `GITLAB_TIMEZONE` — Optional, timezone for date/time formatting (defaults to `Europe/Moscow`)
+    - Examples: `UTC`, `America/New_York`, `Asia/Tokyo`, `Europe/London`
+    - All dates in API responses will be formatted in the specified timezone
 
 ## Installation
 
@@ -88,7 +94,7 @@ To use this MCP server with [Code](https://github.com/just-every/code), add the 
 [mcp_servers.gitlab-mcp]
 command = "npx"
 args = ["-y", "@vitalyostanin/gitlab-mcp"]
-env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-your-token-here" }
+env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-your-token-here", "GITLAB_TIMEZONE" = "Europe/Moscow" }
 ```
 
 **Note:** This configuration uses npx to run the published package. Alternatively, for local development, use `command = "node"` with `args = ["/path/to/dist/index.js"]`.
@@ -109,7 +115,8 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
       "args": ["-y", "@vitalyostanin/gitlab-mcp"],
       "env": {
         "GITLAB_URL": "https://gitlab.example.com",
-        "GITLAB_TOKEN": "glpat-your-token-here"
+        "GITLAB_TOKEN": "glpat-your-token-here",
+        "GITLAB_TIMEZONE": "Europe/Moscow"
       }
     }
   }
@@ -137,6 +144,12 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
 | `gitlab_current_user` | Get current user information (token owner). |
 | `gitlab_project_members` | List project members with access levels. |
 | `gitlab_group_members` | List group members with access levels. |
+| `gitlab_pipelines` | List project pipelines with filters and pagination. |
+| `gitlab_pipeline_details` | Get detailed pipeline information by project and pipeline ID. |
+| `gitlab_pipeline_jobs` | List jobs for a specific pipeline with filters. |
+| `gitlab_project_jobs` | List all jobs for a project with status filters. |
+| `gitlab_job_details` | Get detailed job information by project and job ID. |
+| `gitlab_latest_pipeline` | Get the latest pipeline for a branch (default: default branch). |
 
 ### Read-Only vs Write Mode
 
@@ -171,7 +184,8 @@ args = ["-y", "@vitalyostanin/gitlab-mcp"]
 env = {
   "GITLAB_URL" = "https://gitlab.example.com",
   "GITLAB_TOKEN" = "glpat-your-api-scope-token",
-  "GITLAB_READ_ONLY" = "false"
+  "GITLAB_READ_ONLY" = "false",
+  "GITLAB_TIMEZONE" = "Europe/Moscow"
 }
 ```
 
@@ -343,3 +357,103 @@ The **freshness flag** is a boolean field returned by `gitlab_merge_request_deta
 - **403 Forbidden**: Insufficient permissions. Ensure you have Developer+ role and `api` scope token.
 - **422 Unprocessable**: Reference (branch/commit) not found in repository.
 - **400 Bad Request**: Invalid tag name format. Must follow SemVer (e.g., `v1.2.3`).
+
+#### Pipelines & Jobs Tools
+
+The Pipelines & Jobs tools provide comprehensive access to GitLab CI/CD pipeline and job information, enabling you to monitor build status, analyze job execution, and track pipeline history.
+
+- **`gitlab_pipelines`**: List project pipelines with optional filters (ref, status, dates). Uses `/api/v4/projects/:id/pipelines` endpoint. **Use for**: Browsing pipelines for a project, filtering by branch or status (e.g., failed pipelines on master), monitoring CI/CD activity.
+
+- **`gitlab_pipeline_details`**: Get detailed information about a specific pipeline. **Use for**: Viewing full pipeline details including duration and coverage, checking execution timestamps, getting pipeline URL.
+
+- **`gitlab_pipeline_jobs`**: List all jobs within a specific pipeline. **Use for**: Analyzing pipeline execution stages, viewing job statuses and durations, troubleshooting failed pipeline steps.
+
+- **`gitlab_project_jobs`**: List all jobs across all pipelines in a project. **Use for**: Browsing project-wide job history, filtering by job status (e.g., all failed jobs), analyzing CI/CD patterns.
+
+- **`gitlab_job_details`**: Get detailed information about a specific job. **Use for**: Viewing job execution details, checking artifacts and runner info, analyzing job failures.
+
+- **`gitlab_latest_pipeline`**: Quick access to the most recent pipeline for a branch. **Use for**: Checking current CI/CD status, getting latest build results, monitoring branch health.
+
+**Key Features**:
+- All pipeline and job tools support pagination (default 50, max 100 per page)
+- Status filters for targeted searches (e.g., 'failed', 'running', 'success')
+- Comprehensive metadata including durations, timestamps, and URLs
+- Integration with existing project resolution (by ID or path)
+
+**Pipeline Statuses**:
+- `created`, `waiting_for_resource`, `preparing`, `pending` - Pipeline is queued or starting
+- `running` - Pipeline is currently executing
+- `success` - All jobs completed successfully
+- `failed` - One or more jobs failed
+- `canceled` - Pipeline was canceled manually
+- `skipped` - Pipeline was skipped (e.g., due to branch rules)
+- `manual` - Pipeline requires manual trigger
+- `scheduled` - Pipeline is scheduled to run
+
+**Job Statuses**:
+- `created`, `pending` - Job is waiting to start
+- `running` - Job is currently executing
+- `success` - Job completed successfully
+- `failed` - Job failed
+- `canceled` - Job was canceled
+- `skipped` - Job was skipped
+- `manual` - Job requires manual trigger
+- `scheduled` - Job is scheduled to run
+
+**Example workflow**:
+1. List failed pipelines: `gitlab_pipelines({ project: "my-project", status: "failed" })`
+2. Get pipeline details: `gitlab_pipeline_details({ project: "my-project", pipelineId: 12345 })`
+3. Check failed jobs: `gitlab_pipeline_jobs({ project: "my-project", pipelineId: 12345, scope: ["failed"] })`
+4. Investigate specific job: `gitlab_job_details({ project: "my-project", jobId: 67890 })`
+
+**Example response (gitlab_pipelines)**:
+```json
+{
+  "project": "namespace/my-project",
+  "pipelines": [
+    {
+      "id": 12345,
+      "iid": 678,
+      "status": "failed",
+      "ref": "master",
+      "sha": "abc123de",
+      "createdAt": "2025-10-14T10:00:00Z",
+      "duration": 320,
+      "webUrl": "https://gitlab.example.com/namespace/my-project/-/pipelines/12345"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "perPage": 50,
+    "total": 150,
+    "hasMore": true
+  }
+}
+```
+
+**Example response (gitlab_job_details)**:
+```json
+{
+  "project": "namespace/my-project",
+  "job": {
+    "id": 67890,
+    "name": "test:unit",
+    "stage": "test",
+    "status": "failed",
+    "duration": 45,
+    "pipeline": {
+      "id": 12345,
+      "ref": "master",
+      "status": "failed"
+    },
+    "artifacts": [
+      {
+        "fileType": "junit",
+        "filename": "junit.xml",
+        "size": 1024
+      }
+    ],
+    "url": "https://gitlab.example.com/namespace/my-project/-/jobs/67890"
+  }
+}
+```

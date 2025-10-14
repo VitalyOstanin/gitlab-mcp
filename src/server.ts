@@ -1,9 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 
 import { GitLabClient } from "./gitlab/index.js";
 import { toolError, toolSuccess } from "./utils/tool-response.js";
-import { gitlabProjectsHandler, gitlabProjectsSchema } from "./tools/projects.js";
+import { initializeTimezone } from "./utils/date.js";
+import { loadConfig } from "./config/index.js";
+import { gitlabProjectsHandler, gitlabProjectsArgs } from "./tools/projects.js";
 import { gitlabProjectDetailsHandler, gitlabProjectDetailsArgs } from "./tools/project-details.js";
 import { gitlabProjectTagsHandler, gitlabProjectTagsArgs } from "./tools/project-tags.js";
 import { gitlabProjectTagCreateHandler, gitlabProjectTagCreateArgs } from "./tools/project-tag-create.js";
@@ -11,12 +12,18 @@ import { gitlabProjectsSearchHandler, gitlabProjectsSearchArgs } from "./tools/p
 import { gitlabMergeRequestsHandler, gitlabMergeRequestsArgs } from "./tools/merge-requests.js";
 import { gitlabMergeRequestDetailsHandler, gitlabMergeRequestDetailsArgs } from "./tools/merge-request-details.js";
 import { gitlabMergeRequestsSearchHandler, gitlabMergeRequestsSearchArgs } from "./tools/search.js";
-import { gitlabUsersHandler, gitlabUsersSchema } from "./tools/users.js";
+import { gitlabUsersHandler, gitlabUsersArgs } from "./tools/users.js";
 import { gitlabUserDetailsHandler, gitlabUserDetailsArgs } from "./tools/user-details.js";
 import { gitlabUsersBatchHandler, gitlabUsersBatchArgs } from "./tools/users-batch.js";
-import { gitlabCurrentUserHandler, gitlabCurrentUserSchema } from "./tools/current-user.js";
+import { gitlabCurrentUserHandler, gitlabCurrentUserArgs } from "./tools/current-user.js";
 import { gitlabProjectMembersHandler, gitlabProjectMembersArgs } from "./tools/project-members.js";
 import { gitlabGroupMembersHandler, gitlabGroupMembersArgs } from "./tools/group-members.js";
+import { gitlabPipelinesHandler, gitlabPipelinesArgs } from "./tools/pipelines.js";
+import { gitlabPipelineDetailsHandler, gitlabPipelineDetailsArgs } from "./tools/pipeline-details.js";
+import { gitlabPipelineJobsHandler, gitlabPipelineJobsArgs } from "./tools/pipeline-jobs.js";
+import { gitlabProjectJobsHandler, gitlabProjectJobsArgs } from "./tools/project-jobs.js";
+import { gitlabJobDetailsHandler, gitlabJobDetailsArgs } from "./tools/job-details.js";
+import { gitlabLatestPipelineHandler, gitlabLatestPipelineArgs } from "./tools/latest-pipeline.js";
 
 export class GitlabMcpServer {
   private readonly gitlabMcpServer: McpServer;
@@ -38,6 +45,9 @@ export class GitlabMcpServer {
       },
     );
 
+    const config = loadConfig();
+
+    initializeTimezone(config.timezone);
     this.client = new GitLabClient();
 
     this.registerTools();
@@ -49,9 +59,10 @@ export class GitlabMcpServer {
 
   private registerTools(): void {
     // Service info
-    this.gitlabMcpServer.registerTool(
+    this.gitlabMcpServer.tool(
       "service_info",
-      z.object({}).optional(),
+      "Get GitLab MCP integration status and environment configuration",
+      {},
       async () => {
         try {
           const config = this.client.getConfig();
@@ -59,6 +70,7 @@ export class GitlabMcpServer {
             name: "GitLab MCP",
             gitlabUrl: config.gitlab.url,
             tokenPresent: Boolean(config.gitlab.token),
+            timezone: config.timezone,
             filters: config.filters,
           });
 
@@ -72,7 +84,12 @@ export class GitlabMcpServer {
     );
 
     // Projects
-    this.gitlabMcpServer.registerTool("gitlab_projects", gitlabProjectsSchema, async (args) => gitlabProjectsHandler(this.client, args));
+    this.gitlabMcpServer.tool(
+      "gitlab_projects",
+      "List available GitLab projects with optional filters. Use for: Browsing projects, filtering by membership, searching by name/path. Returns: Project list with names, paths, and URLs. Supports pagination (default 50, max 100 per page).",
+      gitlabProjectsArgs,
+      async (args) => gitlabProjectsHandler(this.client, args),
+    );
 
     this.gitlabMcpServer.tool(
       "gitlab_project_details",
@@ -138,23 +155,33 @@ export class GitlabMcpServer {
     );
 
     // Users
-    this.gitlabMcpServer.registerTool("gitlab_users", gitlabUsersSchema, async (args) => gitlabUsersHandler(this.client, args));
+    this.gitlabMcpServer.tool(
+      "gitlab_users",
+      "List GitLab users with pagination and filters (active, blocked, search). Returns basic user info including last activity date. Use for: Browsing available users, searching users by name or username, monitoring user activity.",
+      gitlabUsersArgs,
+      async (args) => gitlabUsersHandler(this.client, args),
+    );
 
     this.gitlabMcpServer.tool(
       "gitlab_user_details",
-      "Get detailed information about a specific user by ID or username. Includes last activity and sign-in dates. Use for: Getting user profile details, checking user status, viewing activity history.",
+      "Get detailed information about a specific user by ID or username. Accepts numeric ID (faster, direct lookup) or username string (slower, requires search). Includes last activity and sign-in dates. Use for: Getting user profile details, checking user status, viewing activity history. Tip: Use numeric ID from previous queries for better performance.",
       gitlabUserDetailsArgs,
       async (args) => gitlabUserDetailsHandler(this.client, args),
     );
 
     this.gitlabMcpServer.tool(
       "gitlab_users_batch",
-      "Get detailed information about multiple users at once (batch mode, max 50 users). Optimized for bulk operations with parallel API requests. Returns users array and notFound array for missing users. Use for: Getting details of multiple users efficiently, analyzing team activity, bulk user information retrieval.",
+      "Get detailed information about multiple users at once (batch mode, max 50 users). Accepts array of numeric IDs or usernames (numeric IDs are significantly faster). Optimized for bulk operations with parallel API requests. Returns users array and notFound array for missing users. Use for: Getting details of multiple users efficiently, analyzing team activity, bulk user information retrieval. Performance tip: Prefer numeric IDs over usernames when available.",
       gitlabUsersBatchArgs,
       async (args) => gitlabUsersBatchHandler(this.client, args),
     );
 
-    this.gitlabMcpServer.registerTool("gitlab_current_user", gitlabCurrentUserSchema, async (args) => gitlabCurrentUserHandler(this.client, args));
+    this.gitlabMcpServer.tool(
+      "gitlab_current_user",
+      "Get information about the current user (API token owner). Includes permissions flags and 2FA status. Use for: Verifying authentication, checking current user permissions.",
+      gitlabCurrentUserArgs,
+      async (args) => gitlabCurrentUserHandler(this.client, args),
+    );
 
     this.gitlabMcpServer.tool(
       "gitlab_project_members",
@@ -168,6 +195,49 @@ export class GitlabMcpServer {
       "List members of a group/namespace with their access levels (Guest=10, Reporter=20, Developer=30, Maintainer=40, Owner=50). Use for: Checking group membership, reviewing group access levels, finding group administrators.",
       gitlabGroupMembersArgs,
       async (args) => gitlabGroupMembersHandler(this.client, args),
+    );
+
+    // Pipelines & Jobs
+    this.gitlabMcpServer.tool(
+      "gitlab_pipelines",
+      "List pipelines for a specific project with filters and pagination. Use for: Checking CI/CD status, filtering by branch/status/date, monitoring recent pipeline execution. Returns: Pipeline details with status, branch, SHA, duration. Supports pagination (default 50, max 100 per page).",
+      gitlabPipelinesArgs,
+      async (args) => gitlabPipelinesHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_pipeline_details",
+      "Get detailed information about a specific pipeline by project and pipeline ID. Use for: Viewing full pipeline details including duration and coverage, checking pipeline status and timestamps, getting pipeline URL. Returns: All fields including status, ref, sha, duration, user, detailed timestamps.",
+      gitlabPipelineDetailsArgs,
+      async (args) => gitlabPipelineDetailsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_pipeline_jobs",
+      "List jobs for a specific pipeline with filters and pagination. Use for: Viewing all jobs in a pipeline, filtering by job status, analyzing pipeline execution stages. Returns: Job details including name, stage, status, duration, started_at, finished_at. Supports pagination (default 50, max 100 per page).",
+      gitlabPipelineJobsArgs,
+      async (args) => gitlabPipelineJobsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_project_jobs",
+      "List all jobs for a project with filters and pagination. Use for: Browsing project jobs across all pipelines, filtering by job status (e.g., 'failed', 'running'), analyzing CI/CD job history. Returns: Job details with pipeline references. Supports pagination (default 50, max 100 per page).",
+      gitlabProjectJobsArgs,
+      async (args) => gitlabProjectJobsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_job_details",
+      "Get detailed information about a specific job by project and job ID. Use for: Viewing full job details including commit info and artifacts, checking job execution details and runner info, getting job URL. Returns: All fields including status, duration, pipeline reference, artifacts, runner details.",
+      gitlabJobDetailsArgs,
+      async (args) => gitlabJobDetailsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_latest_pipeline",
+      "Get the latest pipeline for a specific branch or default branch. Use for: Checking current CI/CD status of a branch, getting latest build results, monitoring recent pipeline execution. Returns: Latest pipeline details with status and URL. Useful for quick status checks.",
+      gitlabLatestPipelineArgs,
+      async (args) => gitlabLatestPipelineHandler(this.client, args),
     );
   }
 }

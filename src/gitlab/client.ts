@@ -184,6 +184,39 @@ interface CreateTagOptions {
   releaseDescription?: string;
 }
 
+export interface GitLabPipelineFilter extends GitLabPagination {
+  ref?: string;
+  status?: GitLabPipeline["status"];
+  source?: string;
+  orderBy?: "id" | "status" | "ref" | "updated_at" | "user_id";
+  sort?: "asc" | "desc";
+  updatedAfter?: string;
+  updatedBefore?: string;
+  username?: string;
+  yamlErrors?: boolean;
+}
+
+export interface GitLabJobFilter extends GitLabPagination {
+  scope?: Array<"created" | "pending" | "running" | "failed" | "success" |
+                 "canceled" | "skipped" | "manual">;
+}
+
+interface GetPipelinesOptions {
+  filters?: Partial<GitLabPipelineFilter>;
+  pagination?: GitLabPagination;
+}
+
+interface GetPipelineJobsOptions {
+  includeRetried?: boolean;
+  scope?: GitLabJobFilter["scope"];
+  pagination?: GitLabPagination;
+}
+
+interface GetProjectJobsOptions {
+  scope?: GitLabJobFilter["scope"];
+  pagination?: GitLabPagination;
+}
+
 export interface GitLabTag {
   name: string;
   message: string | null;
@@ -197,6 +230,96 @@ export interface GitLabTag {
     tag_name: string;
     description: string | null;
   } | null;
+}
+
+export interface GitLabPipeline {
+  id: number;
+  iid: number;
+  project_id: number;
+  status: "created" | "waiting_for_resource" | "preparing" | "pending" |
+          "running" | "success" | "failed" | "canceled" | "skipped" |
+          "manual" | "scheduled";
+  source: string;
+  ref: string;
+  sha: string;
+  web_url: string;
+  created_at: string;
+  updated_at: string;
+  started_at?: string;
+  finished_at?: string;
+  duration?: number;
+  queued_duration?: number;
+  coverage?: string;
+  user?: {
+    id: number;
+    name: string;
+    username: string;
+    avatar_url?: string;
+  };
+  detailed_status?: {
+    icon: string;
+    text: string;
+    label: string;
+    group: string;
+  };
+}
+
+export interface GitLabJob {
+  id: number;
+  name: string;
+  stage: string;
+  status: "created" | "pending" | "running" | "success" | "failed" |
+          "canceled" | "skipped" | "manual" | "scheduled";
+  ref: string;
+  tag: boolean;
+  coverage?: string;
+  allow_failure: boolean;
+  created_at: string;
+  started_at?: string;
+  finished_at?: string;
+  erased_at?: string;
+  duration?: number;
+  queued_duration?: number;
+  user?: {
+    id: number;
+    name: string;
+    username: string;
+    avatar_url?: string;
+  };
+  commit: {
+    id: string;
+    short_id: string;
+    title: string;
+    created_at: string;
+    message: string;
+    author_name: string;
+    author_email: string;
+  };
+  pipeline: {
+    id: number;
+    iid: number;
+    ref: string;
+    sha: string;
+    status: string;
+    source: string;
+    created_at: string;
+    updated_at: string;
+    web_url: string;
+  };
+  web_url: string;
+  artifacts?: Array<{
+    file_type: string;
+    filename: string;
+    size: number;
+  }>;
+  runner?: {
+    id: number;
+    description: string;
+    active: boolean;
+    is_shared: boolean;
+  };
+  artifacts_expire_at?: string;
+  tag_list: string[];
 }
 
 export class GitLabClient {
@@ -249,11 +372,15 @@ export class GitLabClient {
     return error.message;
   }
 
+  private parseHeaderNumber(headers: Record<string, string>, headerName: string): number | undefined {
+    return headers[headerName] ? Number(headers[headerName]) : undefined;
+  }
+
   private extractPaginationInfo(headers: Record<string, string>, page: number, perPage: number): PaginationInfo {
-    const total = headers["x-total"] ? Number.parseInt(headers["x-total"]) : undefined;
-    const totalPages = headers["x-total-pages"] ? Number.parseInt(headers["x-total-pages"]) : undefined;
-    const nextPage = headers["x-next-page"] ? Number.parseInt(headers["x-next-page"]) : undefined;
-    const prevPage = headers["x-prev-page"] ? Number.parseInt(headers["x-prev-page"]) : undefined;
+    const total = this.parseHeaderNumber(headers, "x-total");
+    const totalPages = this.parseHeaderNumber(headers, "x-total-pages");
+    const nextPage = this.parseHeaderNumber(headers, "x-next-page");
+    const prevPage = this.parseHeaderNumber(headers, "x-prev-page");
     const paginationInfo = {
       page,
       perPage,
@@ -356,17 +483,19 @@ export class GitLabClient {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        const {status} = error.response;
-        const {data} = error.response;
+        const { status } = error.response;
+        const { data } = error.response;
 
         if (status === 400) {
-          throw new Error(`Bad request: Invalid tag parameters. ${JSON.stringify(data)}`);
+          const details = data && typeof data === "object" ? JSON.stringify(data) : String(data);
+
+          throw new Error(`Bad request: Invalid tag parameters. ${details}`);
         } else if (status === 403) {
-          throw new Error("Forbidden: Insufficient permissions to create tags. Requires at least Developer role.");
+          throw new Error(`Forbidden: Insufficient permissions to create tag '${options.tagName}' in project ${projectIdEncoded}. Requires at least Developer role.`);
         } else if (status === 409) {
-          throw new Error(`Conflict: Tag '${options.tagName}' already exists in this project.`);
+          throw new Error(`Conflict: Tag '${options.tagName}' already exists in project ${projectIdEncoded}.`);
         } else if (status === 422) {
-          throw new Error(`Unprocessable: Reference '${options.ref}' not found in repository.`);
+          throw new Error(`Unprocessable: Reference '${options.ref}' not found in repository for project ${projectIdEncoded}.`);
         }
       }
 
@@ -550,9 +679,31 @@ export class GitLabClient {
   }
 
   async getUser(userId: number | string): Promise<GitLabUser> {
-    const userIdEncoded = typeof userId === "number" ? userId : encodeURIComponent(userId);
-    const response = await this.request(() => this.axios.get<GitLabUser>(`/api/v4/users/${userIdEncoded}`));
-    const user = response.data;
+    // GitLab API endpoint /api/v4/users/:id accepts only numeric ID
+    // For username lookup, we need to use /api/v4/users?username=...
+    if (typeof userId === "number") {
+      const response = await this.request(() => this.axios.get<GitLabUser>(`/api/v4/users/${userId}`));
+      const user = response.data;
+
+      return user;
+    }
+
+    // String parameter - treat as username
+    const response = await this.request(() =>
+      this.axios.get<GitLabUser[]>("/api/v4/users", {
+        params: { username: userId },
+      }),
+    );
+    const users = response.data;
+
+    if (!users.length) {
+      const error = new Error(`User not found: ${userId}`) as Error & { response?: { status: number } };
+
+      error.response = { status: 404 };
+      throw error;
+    }
+
+    const user = users[0];
 
     return user;
   }
@@ -650,6 +801,163 @@ export class GitLabClient {
     const { data: members, headers } = response;
     const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
     const result = { data: members, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getPipelines(projectId: number, options: GetPipelinesOptions = {}): Promise<PaginatedResponse<GitLabPipeline[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    const filters = options.filters ?? {};
+    const params: Record<string, unknown> = {
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+
+    if (filters.ref) {
+      params.ref = filters.ref;
+    }
+
+    if (filters.status) {
+      params.status = filters.status;
+    }
+
+    if (filters.source) {
+      params.source = filters.source;
+    }
+
+    if (filters.orderBy) {
+      params.order_by = filters.orderBy;
+    }
+
+    if (filters.sort) {
+      params.sort = filters.sort;
+    }
+
+    if (filters.updatedAfter) {
+      params.updated_after = filters.updatedAfter;
+    }
+
+    if (filters.updatedBefore) {
+      params.updated_before = filters.updatedBefore;
+    }
+
+    if (filters.username) {
+      params.username = filters.username;
+    }
+
+    if (filters.yamlErrors !== undefined) {
+      params.yaml_errors = filters.yamlErrors;
+    }
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabPipeline[]>(`/api/v4/projects/${projectId}/pipelines`, {
+        params,
+      }),
+    );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getPipeline(projectId: number, pipelineId: number): Promise<GitLabPipeline> {
+    const response = await this.request(() =>
+      this.axios.get<GitLabPipeline>(`/api/v4/projects/${projectId}/pipelines/${pipelineId}`),
+    );
+    const pipeline = response.data;
+
+    return pipeline;
+  }
+
+  async getLatestPipeline(projectId: number, ref?: string): Promise<GitLabPipeline> {
+    const params: Record<string, unknown> = {};
+
+    if (ref) {
+      params.ref = ref;
+    }
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabPipeline>(`/api/v4/projects/${projectId}/pipelines/latest`, {
+        params,
+      }),
+    );
+    const pipeline = response.data;
+
+    return pipeline;
+  }
+
+  async getPipelineJobs(projectId: number, pipelineId: number, options: GetPipelineJobsOptions = {}): Promise<PaginatedResponse<GitLabJob[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    const params: Record<string, unknown> = {
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+
+    if (options.includeRetried !== undefined) {
+      params.include_retried = options.includeRetried;
+    }
+
+    if (options.scope?.length) {
+      params.scope = options.scope;
+    }
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabJob[]>(`/api/v4/projects/${projectId}/pipelines/${pipelineId}/jobs`, {
+        params,
+      }),
+    );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getProjectJobs(projectId: number, options: GetProjectJobsOptions = {}): Promise<PaginatedResponse<GitLabJob[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    const params: Record<string, unknown> = {
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+
+    if (options.scope?.length) {
+      params.scope = options.scope;
+    }
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabJob[]>(`/api/v4/projects/${projectId}/jobs`, {
+        params,
+      }),
+    );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getJob(projectId: number, jobId: number): Promise<GitLabJob> {
+    const response = await this.request(() =>
+      this.axios.get<GitLabJob>(`/api/v4/projects/${projectId}/jobs/${jobId}`),
+    );
+    const job = response.data;
+
+    return job;
+  }
+
+  createPipelineUrl(projectPath: string, pipelineId: number | string): string {
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(`${projectPath}/-/pipelines/${pipelineId}`, baseUrl);
+    const result = url.toString();
+
+    return result;
+  }
+
+  createJobUrl(projectPath: string, jobId: number | string): string {
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(`${projectPath}/-/jobs/${jobId}`, baseUrl);
+    const result = url.toString();
 
     return result;
   }

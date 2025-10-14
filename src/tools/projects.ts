@@ -4,15 +4,14 @@ import type { GitLabClient } from "../gitlab/index.js";
 import { mapProject } from "../mappers/gitlab.js";
 import { toolError, toolSuccess } from "../utils/tool-response.js";
 
-export const gitlabProjectsSchema = z
-  .object({
-    search: z.string().optional().describe("Filter projects by name, path, or description (optional, for basic filtering)"),
-    membership: z.boolean().optional().describe("Show only projects where current user is a member (optional)"),
-    page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
-    perPage: z.number().int().min(1).max(100).optional().describe("Number of projects per page (default: 50, max: 100)"),
-  })
-  .optional()
-  .describe("List available GitLab projects with optional filters. Use for browsing projects.");
+export const gitlabProjectsArgs = {
+  search: z.string().optional().describe("Filter projects by name, path, or description (optional, for basic filtering)"),
+  membership: z.boolean().optional().describe("Show only projects where current user is a member (optional)"),
+  page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
+  perPage: z.number().int().min(1).max(100).optional().describe("Number of projects per page (default: 50, max: 100)"),
+};
+
+export const gitlabProjectsSchema = z.object(gitlabProjectsArgs).optional();
 
 export async function gitlabProjectsHandler(client: GitLabClient, rawInput?: unknown) {
   const parsed = gitlabProjectsSchema.parse(rawInput ?? {});

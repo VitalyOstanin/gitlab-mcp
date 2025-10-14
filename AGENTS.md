@@ -10,6 +10,7 @@
 - `src/`: TypeScript sources for the MCP server, GitLab client, and tool registrations.
 - `dist/`: Compiled JavaScript emitted by `npm run build` (ignored by git).
 - `index.ts`: Entry point that wires the stdio transport to the server.
+- `README-release.md`: Release procedure checklist in English — comprehensive guide for executing project releases.
 
 ## Build & Development Commands
 - `npm run build`: Compile TypeScript to `dist/`.

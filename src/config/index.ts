@@ -9,6 +9,7 @@ export interface Config {
     includeMembershipOnly: boolean;
     includeNamespaces: string[];
   };
+  readOnly: boolean;
 }
 
 let cachedConfig: Config | null = null;
@@ -28,6 +29,8 @@ export function loadConfig(force = false): Config {
     throw new Error(errorMessage);
   }
 
+  // Read read-only mode flag (default: true for safety)
+  const readOnly = process.env.GITLAB_READ_ONLY !== "false";
   const config = {
     gitlab: {
       url: envParsed.data.url,
@@ -37,6 +40,7 @@ export function loadConfig(force = false): Config {
       includeMembershipOnly: false,
       includeNamespaces: [],
     },
+    readOnly,
   } satisfies Config;
 
   cachedConfig = config;

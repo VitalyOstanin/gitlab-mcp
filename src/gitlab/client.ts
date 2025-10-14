@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import pRetry from "p-retry";
+import semver from "semver";
 import { z } from "zod";
 
 import { loadConfig, type Config } from "../config/index.js";
@@ -176,6 +177,28 @@ interface GetGroupMembersOptions extends GitLabPagination {
   includeInherited?: boolean;
 }
 
+interface CreateTagOptions {
+  tagName: string;
+  ref: string;
+  message?: string;
+  releaseDescription?: string;
+}
+
+export interface GitLabTag {
+  name: string;
+  message: string | null;
+  target: string;
+  commit: {
+    id: string;
+    message: string;
+    created_at: string;
+  };
+  release: {
+    tag_name: string;
+    description: string | null;
+  } | null;
+}
+
 export class GitLabClient {
   private static readonly RETRY_CONFIG = {
     MAX_RETRIES: 3,
@@ -309,6 +332,46 @@ export class GitLabClient {
     const result = { data, pagination: paginationInfo };
 
     return result;
+  }
+
+  async createTag(projectId: number | string, options: CreateTagOptions): Promise<GitLabTag> {
+    // Validate tag name follows SemVer
+    const cleanTagName = options.tagName.startsWith("v") ? options.tagName.slice(1) : options.tagName;
+
+    if (!semver.valid(cleanTagName)) {
+      throw new Error(`Invalid tag name: ${options.tagName}. Must follow SemVer format (e.g., v1.2.3 or 1.2.3)`);
+    }
+
+    const projectIdEncoded = typeof projectId === "number" ? projectId : encodeURIComponent(projectId);
+    const requestBody = {
+      tag_name: options.tagName,
+      ref: options.ref,
+      message: options.message,
+      release_description: options.releaseDescription,
+    };
+
+    try {
+      const response = await this.request(() => this.axios.post<GitLabTag>(`/api/v4/projects/${projectIdEncoded}/repository/tags`, requestBody));
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        const {status} = error.response;
+        const {data} = error.response;
+
+        if (status === 400) {
+          throw new Error(`Bad request: Invalid tag parameters. ${JSON.stringify(data)}`);
+        } else if (status === 403) {
+          throw new Error("Forbidden: Insufficient permissions to create tags. Requires at least Developer role.");
+        } else if (status === 409) {
+          throw new Error(`Conflict: Tag '${options.tagName}' already exists in this project.`);
+        } else if (status === 422) {
+          throw new Error(`Unprocessable: Reference '${options.ref}' not found in repository.`);
+        }
+      }
+
+      throw error;
+    }
   }
 
   async getMergeRequests(projectId: number, options: GetMergeRequestsOptions = {}): Promise<PaginatedResponse<GitLabMergeRequest[]>> {

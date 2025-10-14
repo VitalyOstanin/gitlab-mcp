@@ -6,6 +6,7 @@ import { toolError, toolSuccess } from "./utils/tool-response.js";
 import { gitlabProjectsHandler, gitlabProjectsSchema } from "./tools/projects.js";
 import { gitlabProjectDetailsHandler, gitlabProjectDetailsArgs } from "./tools/project-details.js";
 import { gitlabProjectTagsHandler, gitlabProjectTagsArgs } from "./tools/project-tags.js";
+import { gitlabProjectTagCreateHandler, gitlabProjectTagCreateArgs } from "./tools/project-tag-create.js";
 import { gitlabProjectsSearchHandler, gitlabProjectsSearchArgs } from "./tools/projects-search.js";
 import { gitlabMergeRequestsHandler, gitlabMergeRequestsArgs } from "./tools/merge-requests.js";
 import { gitlabMergeRequestDetailsHandler, gitlabMergeRequestDetailsArgs } from "./tools/merge-request-details.js";
@@ -82,9 +83,28 @@ export class GitlabMcpServer {
 
     this.gitlabMcpServer.tool(
       "gitlab_project_tags",
-      "List tags for a specific GitLab project",
+      "List tags for a specific GitLab project with SemVer-based next release tag suggestion. " +
+        "Use for: Browsing repository tags, planning next release version, getting pre-filled tag creation URL. " +
+        "Returns: Tag list with names and commit IDs, current latest SemVer tag, suggested next patch version (auto-incremented), " +
+        "and a GitLab web UI URL pre-filled with the suggested tag name for manual creation. " +
+        "Note: Only considers tags following SemVer format (e.g., 'v1.2.3' or '1.2.3'). " +
+        "If no valid SemVer tags exist, defaults to v0.1.0 as current and v0.1.1 as next.",
       gitlabProjectTagsArgs,
       async (args) => gitlabProjectTagsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_project_tag_create",
+      "Create a new tag in a GitLab project repository. " +
+        "IMPORTANT: Requires write access - disabled by default in read-only mode. " +
+        "Requirements: (1) Set GITLAB_READ_ONLY=false environment variable, (2) GitLab token with 'api' scope (not just 'read_api'), (3) At least Developer role in target project. " +
+        "Use for: Creating release tags programmatically, automating version tagging, marking specific commits as releases. " +
+        "Parameters: project (ID or path), tagName (must follow SemVer format like 'v1.2.3' or '1.2.3'), ref (branch/commit to tag, defaults to 'master'), optional message and releaseDescription. " +
+        "Returns: Created tag with name, target commit, message, release info, and GitLab web URL. " +
+        "Validation: Tag name must be valid SemVer. Common errors: 409 (tag already exists), 403 (insufficient permissions), 422 (ref not found), 400 (invalid parameters). " +
+        "Tip: Use gitlab_project_tags first to get suggested next version and verify the tag doesn't already exist.",
+      gitlabProjectTagCreateArgs,
+      async (args) => gitlabProjectTagCreateHandler(this.client, args),
     );
 
     this.gitlabMcpServer.tool(

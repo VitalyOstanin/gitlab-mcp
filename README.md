@@ -27,7 +27,11 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
 - Node.js ≥ 20
 - Environment variables:
   - `GITLAB_URL` — GitLab instance base URL
-  - `GITLAB_TOKEN` — Personal access token with `read_api` and `read_repository` scopes
+  - `GITLAB_TOKEN` — Personal access token
+    - **Read-only mode (default)**: `read_api` and `read_repository` scopes
+    - **Write mode** (for tag creation): `api` scope
+  - `GITLAB_READ_ONLY` — Optional, defaults to `true` for safety
+    - Set to `false` to enable write operations (tag creation)
 
 ## Installation
 
@@ -121,7 +125,8 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
 | `service_info` | Returns GitLab connection status and active filters. |
 | `gitlab_projects` | List available projects with pagination and search. |
 | `gitlab_project_details` | Get project details by ID or namespace. |
-| `gitlab_project_tags` | List project tags with suggested next release tag. |
+| `gitlab_project_tags` | List project tags with SemVer-based next release tag calculation and pre-filled creation URL. |
+| `gitlab_project_tag_create` | Create a new tag in a project repository (requires write access). |
 | `gitlab_projects_search` | Search projects by name, path, and description. |
 | `gitlab_merge_requests` | List project merge requests with filters and pagination. |
 | `gitlab_merge_request_details` | Get MR details including URLs and freshness flag. |
@@ -132,6 +137,45 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
 | `gitlab_current_user` | Get current user information (token owner). |
 | `gitlab_project_members` | List project members with access levels. |
 | `gitlab_group_members` | List group members with access levels. |
+
+### Read-Only vs Write Mode
+
+By default, the GitLab MCP server operates in **read-only mode** for safety. This prevents accidental modifications to your GitLab repositories.
+
+#### Read-Only Mode (Default)
+
+- **Token requirements**: `read_api` and `read_repository` scopes
+- **Available operations**: All read operations (list projects, MRs, tags, users, etc.)
+- **Configuration**: No special configuration needed (default behavior)
+
+#### Write Mode
+
+To enable write operations (currently: tag creation), you must:
+
+1. **Generate a new GitLab token** with the `api` scope (instead of `read_api`)
+   - Go to GitLab → Settings → Access Tokens
+   - Create a new token with the `api` scope
+   - Note: The `api` scope includes both read and write permissions
+
+2. **Set the environment variable** `GITLAB_READ_ONLY=false`
+
+3. **Ensure proper permissions**: You need at least **Developer** role in the target project for tag creation
+
+**Example configuration for write mode:**
+
+```toml
+# ~/.code/config.toml
+[mcp_servers.gitlab-mcp]
+command = "npx"
+args = ["-y", "@vitalyostanin/gitlab-mcp"]
+env = {
+  "GITLAB_URL" = "https://gitlab.example.com",
+  "GITLAB_TOKEN" = "glpat-your-api-scope-token",
+  "GITLAB_READ_ONLY" = "false"
+}
+```
+
+**Security Note**: Write mode allows the server to make changes to your repositories. Only enable it when needed and ensure your token is properly secured.
 
 ### Tool Usage Guidelines
 
@@ -198,3 +242,104 @@ The **freshness flag** is a boolean field returned by `gitlab_merge_request_deta
 - Batch mode supports up to 50 users per request for optimal performance
 - Handles missing users gracefully without failing the entire batch request
 - Access levels are provided both as numbers and human-readable descriptions
+
+#### Tags Tools
+
+- **`gitlab_project_tags`**: List repository tags with automatic next version suggestion based on SemVer. Returns all tags with commit information, identifies the latest SemVer-compliant tag, and suggests the next patch version. Also provides a pre-filled GitLab web UI URL for easy manual tag creation.
+
+**Use cases:**
+- Planning next release version
+- Viewing tag history with automatic versioning
+- Getting a quick link to create the next release tag
+
+**How it works:**
+- Parses all tags that follow SemVer format (e.g., `v1.2.3`, `1.0.0`)
+- Identifies the highest version as current
+- Suggests next patch version (e.g., `v1.2.3` → `v1.2.4`)
+- Generates GitLab UI URL: `https://gitlab.example.com/project/-/tags/new?tag_name=v1.2.4&ref=master`
+
+**Example response:**
+```json
+{
+  "project": "namespace/my-project",
+  "tags": [
+    { "name": "v1.2.3", "commitId": "abc123...", "authoredAt": "2025-01-10T10:30:00Z" },
+    { "name": "v1.2.2", "commitId": "def456...", "authoredAt": "2025-01-05T14:20:00Z" }
+  ],
+  "versionInfo": {
+    "currentTag": "v1.2.3",
+    "suggestedNextTag": "v1.2.4",
+    "createTagUrl": "https://gitlab.example.com/namespace/my-project/-/tags/new?tag_name=v1.2.4&ref=master"
+  },
+  "pagination": {
+    "page": 1,
+    "perPage": 50,
+    "total": 150,
+    "hasMore": true
+  }
+}
+```
+
+- **`gitlab_project_tag_create`**: Create a new tag in a GitLab project repository programmatically. **Requires write mode** - see [Read-Only vs Write Mode](#read-only-vs-write-mode) section above.
+
+**Requirements:**
+- Write mode enabled (`GITLAB_READ_ONLY=false`)
+- GitLab token with `api` scope
+- At least **Developer** role in the target project
+
+**Parameters:**
+- `project` (required): Project ID or path (e.g., `"namespace/project"` or `123`)
+- `tagName` (required): Tag name following SemVer format (e.g., `"v1.2.4"` or `"1.2.4"`)
+- `ref` (optional): Branch name or commit SHA to tag (defaults to `"master"`)
+- `message` (optional): Tag message/annotation
+- `releaseDescription` (optional): Release description (creates a GitLab release)
+
+**Use cases:**
+- Automating release tagging in CI/CD pipelines
+- Creating tags programmatically after successful builds
+- Batch tag creation across multiple projects
+
+**Workflow recommendation:**
+1. Use `gitlab_project_tags` to check existing tags and get suggested next version
+2. Use `gitlab_project_tag_create` to create the new tag
+3. Handle common errors (tag already exists, insufficient permissions, ref not found)
+
+**Example usage:**
+```json
+{
+  "project": "namespace/my-project",
+  "tagName": "v1.2.4",
+  "ref": "master",
+  "message": "Release version 1.2.4",
+  "releaseDescription": "### Features\n- Added new API endpoint\n- Improved performance"
+}
+```
+
+**Example response:**
+```json
+{
+  "project": "namespace/my-project",
+  "tag": {
+    "name": "v1.2.4",
+    "message": "Release version 1.2.4",
+    "target": "master",
+    "commit": {
+      "id": "abc123def456...",
+      "message": "Merge branch 'feature/new-api'",
+      "createdAt": "2025-10-14T10:30:00Z"
+    },
+    "release": {
+      "tagName": "v1.2.4",
+      "description": "### Features\n- Added new API endpoint\n- Improved performance"
+    },
+    "url": "https://gitlab.example.com/namespace/my-project/-/tags/v1.2.4"
+  }
+}
+```
+
+**Common errors:**
+- **Read-only mode**: Tag creation is disabled by default. Enable write mode as described above.
+- **409 Conflict**: Tag already exists. Check existing tags with `gitlab_project_tags`.
+- **403 Forbidden**: Insufficient permissions. Ensure you have Developer+ role and `api` scope token.
+- **422 Unprocessable**: Reference (branch/commit) not found in repository.
+- **400 Bad Request**: Invalid tag name format. Must follow SemVer (e.g., `v1.2.3`).

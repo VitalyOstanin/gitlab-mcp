@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.1.2] - 2025-10-16
+
+### Fixed
+- GitHub Actions workflow for release creation - improved tag handling and release notes generation
+- Package.json publishing configuration - ensured all necessary files are included in npm package
+- Installation guide documentation - clarified npx usage and local development setup
+
+### Changed
+- Replaced badge.fury.io with shields.io for npm version badge in README for better reliability
+- Updated server initialization to use version directly from package.json for consistency
+- Enhanced README files with more detailed GitHub Actions workflow documentation
 
 ## [0.1.1] - 2025-10-14
 

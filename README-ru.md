@@ -56,10 +56,11 @@ npx -y @vitalyostanin/gitlab-mcp
 Установка через Claude MCP CLI:
 
 ```bash
-claude mcp add --scope user gitlab-mcp npx -y @vitalyostanin/gitlab-mcp
+claude mcp add --scope user \
+--env GITLAB_URL='https://gitlab.example.com' \
+--env GITLAB_TOKEN='glpat-your-token-here' \
+gitlab-mcp -- npx -y @vitalyostanin/gitlab-mcp@latest
 ```
-
-После выполнения команды вас попросят ввести URL GitLab и токен.
 
 **Опции области видимости:**
 - `--scope user`: Установка для текущего пользователя (для всех проектов)

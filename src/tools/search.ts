@@ -6,7 +6,7 @@ import { toolError, toolSuccess } from "../utils/tool-response.js";
 
 export const gitlabMergeRequestsSearchArgs = {
   project: z.union([z.string(), z.number()]).optional().describe("Optional project ID or path to limit search scope"),
-  query: z.string().min(1).describe("Search query (searches in MR title and description)"),
+  query: z.string().min(1).describe("Search query (searches in MR title and description). Note: Boolean operators (OR, AND, NOT) are NOT supported by GitLab Search API. Use separate queries to search for multiple terms."),
   state: z.enum(["opened", "closed", "merged", "all"]).default("all").describe("Filter by MR state (default: all)"),
   targetBranch: z.string().optional().describe("Filter merge requests by target branch name (e.g., 'master', 'develop')"),
   page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),

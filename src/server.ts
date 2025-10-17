@@ -159,7 +159,7 @@ export class GitlabMcpServer {
     // Search
     this.gitlabMcpServer.tool(
       "gitlab_merge_requests_search",
-      "Search merge requests by text using GitLab Search API. Use for: Finding MRs by text in title/description across all projects or within specific project, combining text search with filters (state, target branch). Supports: Optional project scope, state filter (opened/closed/merged/all), targetBranch filter (e.g., 'master'). Returns: Same fields as gitlab_merge_requests including sourceBranch and targetBranch.",
+      "Search merge requests by text using GitLab Search API. Use for: Finding MRs by text in title/description across all projects or within specific project, combining text search with filters (state, target branch). Supports: Optional project scope, state filter (opened/closed/merged/all), targetBranch filter (e.g., 'master'). Returns: Same fields as gitlab_merge_requests including sourceBranch and targetBranch. IMPORTANT: Boolean operators (OR, AND, NOT) are NOT supported - they will be treated as literal text. Use separate API calls for multiple search terms.",
       gitlabMergeRequestsSearchArgs,
       async (args) => gitlabMergeRequestsSearchHandler(this.client, args),
     );

@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.1.3] - 2025-10-17
 - [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.1.3] - 2025-10-17
+
+### Documentation
+- Improved post-release verification section in README-release.md with more detailed steps and clearer expectations
+- Added warning about unsupported Boolean operators (OR, AND, NOT) in `gitlab_merge_requests_search` tool
+- Added VS Code Cline setup instructions and unified npx examples to use @latest consistently
 
 ## [0.1.2] - 2025-10-16
 

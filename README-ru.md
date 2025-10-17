@@ -10,6 +10,7 @@ GitLab MCP — сервер Model Context Protocol, который предос�
 - [Запуск сервера (stdio)](#запуск-сервера-stdio)
 - [Конфигурация для Code (Рекомендуется)](#конфигурация-для-code-рекомендуется)
 - [Конфигурация для Claude Code CLI](#конфигурация-для-claude-code-cli)
+- [Конфигурация для VS Code Cline](#конфигурация-для-vs-code-cline)
 - [MCP-инструменты](#mcp-инструменты)
 
 ## Возможности
@@ -48,7 +49,7 @@ GitLab MCP — сервер Model Context Protocol, который предос�
 ```bash
 GITLAB_URL="https://gitlab.example.com" \
 GITLAB_TOKEN="glpat-your-token-here" \
-npx -y @vitalyostanin/gitlab-mcp
+npx -y @vitalyostanin/gitlab-mcp@latest
 ```
 
 ### Используя Claude MCP CLI
@@ -94,7 +95,7 @@ node dist/index.js
 ```toml
 [mcp_servers.gitlab-mcp]
 command = "npx"
-args = ["-y", "@vitalyostanin/gitlab-mcp"]
+args = ["-y", "@vitalyostanin/gitlab-mcp@latest"]
 env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-your-token-here", "GITLAB_TIMEZONE" = "Europe/Moscow" }
 ```
 
@@ -113,7 +114,7 @@ env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-you
     "gitlab-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@vitalyostanin/gitlab-mcp"],
+      "args": ["-y", "@vitalyostanin/gitlab-mcp@latest"],
       "env": {
         "GITLAB_URL": "https://gitlab.example.com",
         "GITLAB_TOKEN": "glpat-your-token-here",
@@ -125,6 +126,33 @@ env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-you
 ```
 
 **Примечание:** Эта конфигурация использует npx для запуска опубликованного пакета. Для локальной разработки используйте `"command": "node"` с `"args": ["/абсолютный/путь/к/gitlab-mcp/dist/index.js"]`.
+
+## Конфигурация для VS Code Cline
+
+Чтобы использовать этот MCP сервер с расширением [Cline](https://github.com/cline/cline) в VS Code:
+
+1. Откройте VS Code с установленным расширением Cline
+2. Нажмите на иконку MCP Servers в верхней навигации Cline
+3. Выберите вкладку "Configure" и нажмите "Configure MCP Servers"
+4. Добавьте следующую конфигурацию в `cline_mcp_settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "gitlab-mcp": {
+      "command": "npx",
+      "args": ["-y", "@vitalyostanin/gitlab-mcp@latest"],
+      "env": {
+        "GITLAB_URL": "https://gitlab.example.com",
+        "GITLAB_TOKEN": "glpat-your-token-here",
+        "GITLAB_TIMEZONE": "Europe/Moscow"
+      }
+    }
+  }
+}
+```
+
+**Примечание:** Эта конфигурация использует npx для запуска опубликованного пакета. Для локальной разработки используйте `"command": "node"` с `"args": ["/абсолютный/путь/к/gitlab-mcp/dist/index.js"]`. Переменные окружения `GITLAB_TIMEZONE` и `GITLAB_READ_ONLY` являются опциональными.
 
 ## MCP-инструменты
 
@@ -181,7 +209,7 @@ env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-you
 # ~/.code/config.toml
 [mcp_servers.gitlab-mcp]
 command = "npx"
-args = ["-y", "@vitalyostanin/gitlab-mcp"]
+args = ["-y", "@vitalyostanin/gitlab-mcp@latest"]
 env = {
   "GITLAB_URL" = "https://gitlab.example.com",
   "GITLAB_TOKEN" = "glpat-your-api-scope-token",

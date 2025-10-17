@@ -14,6 +14,7 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
 - [Running the server (stdio)](#running-the-server-stdio)
 - [Configuration for Code (Recommended)](#configuration-for-code-recommended)
 - [Configuration for Claude Code CLI](#configuration-for-claude-code-cli)
+- [Configuration for VS Code Cline](#configuration-for-vs-code-cline)
 - [MCP Tools](#mcp-tools)
 
 ## Features
@@ -52,7 +53,7 @@ You can run the server directly with npx without installation:
 ```bash
 GITLAB_URL="https://gitlab.example.com" \
 GITLAB_TOKEN="glpat-your-token-here" \
-npx -y @vitalyostanin/gitlab-mcp
+npx -y @vitalyostanin/gitlab-mcp@latest
 ```
 
 ### Using Claude MCP CLI
@@ -187,7 +188,7 @@ To use this MCP server with [Code](https://github.com/just-every/code), add the 
 ```toml
 [mcp_servers.gitlab-mcp]
 command = "npx"
-args = ["-y", "@vitalyostanin/gitlab-mcp"]
+args = ["-y", "@vitalyostanin/gitlab-mcp@latest"]
 env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-your-token-here", "GITLAB_TIMEZONE" = "Europe/Moscow" }
 ```
 
@@ -206,7 +207,7 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
     "gitlab-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@vitalyostanin/gitlab-mcp"],
+      "args": ["-y", "@vitalyostanin/gitlab-mcp@latest"],
       "env": {
         "GITLAB_URL": "https://gitlab.example.com",
         "GITLAB_TOKEN": "glpat-your-token-here",
@@ -218,6 +219,33 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
 ```
 
 **Note:** This configuration uses npx to run the published package. For local development, use `"command": "node"` with `"args": ["/absolute/path/to/gitlab-mcp/dist/index.js"]`.
+
+## Configuration for VS Code Cline
+
+To use this MCP server with [Cline](https://github.com/cline/cline) extension in VS Code:
+
+1. Open VS Code with Cline extension installed
+2. Click the MCP Servers icon in Cline's top navigation
+3. Select the "Configure" tab and click "Configure MCP Servers"
+4. Add the following configuration to `cline_mcp_settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "gitlab-mcp": {
+      "command": "npx",
+      "args": ["-y", "@vitalyostanin/gitlab-mcp@latest"],
+      "env": {
+        "GITLAB_URL": "https://gitlab.example.com",
+        "GITLAB_TOKEN": "glpat-your-token-here",
+        "GITLAB_TIMEZONE": "Europe/Moscow"
+      }
+    }
+  }
+}
+```
+
+**Note:** This configuration uses npx to run the published package. For local development, use `"command": "node"` with `"args": ["/absolute/path/to/gitlab-mcp/dist/index.js"]`. The `GITLAB_TIMEZONE` and `GITLAB_READ_ONLY` environment variables are optional.
 
 ## MCP Tools
 
@@ -274,7 +302,7 @@ To enable write operations (currently: tag creation), you must:
 # ~/.code/config.toml
 [mcp_servers.gitlab-mcp]
 command = "npx"
-args = ["-y", "@vitalyostanin/gitlab-mcp"]
+args = ["-y", "@vitalyostanin/gitlab-mcp@latest"]
 env = {
   "GITLAB_URL" = "https://gitlab.example.com",
   "GITLAB_TOKEN" = "glpat-your-api-scope-token",

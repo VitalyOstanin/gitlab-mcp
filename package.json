@@ -1,6 +1,6 @@
 {
   "name": "@vitalyostanin/gitlab-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "postbuild": "chmod +x dist/index.js",

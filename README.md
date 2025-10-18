@@ -23,6 +23,7 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
 - View repository tags with SemVer-based next release tag calculation.
 - List merge requests with filters for state and update date.
 - Get merge request details with freshness indicator (merged within 24 hours).
+- View changed files and full diffs for merge requests with pagination and filtering.
 - Search merge requests by title and description.
 - List GitLab users with activity tracking and batch operations.
 - Manage project and group members with access level information.
@@ -259,6 +260,8 @@ To use this MCP server with [Cline](https://github.com/cline/cline) extension in
 | `gitlab_projects_search` | Search projects by name, path, and description. |
 | `gitlab_merge_requests` | List project merge requests with filters and pagination. |
 | `gitlab_merge_request_details` | Get MR details including URLs and freshness flag. |
+| `gitlab_merge_request_changes` | List changed files with filtering and pagination. |
+| `gitlab_merge_request_diff` | Get full diff content (may return large data). |
 | `gitlab_merge_requests_search` | Search merge requests by title and description. |
 | `gitlab_users` | List users with pagination and activity tracking. |
 | `gitlab_user_details` | Get detailed user information by ID or username. |

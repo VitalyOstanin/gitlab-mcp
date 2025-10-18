@@ -12,6 +12,8 @@ import { gitlabProjectTagCreateHandler, gitlabProjectTagCreateArgs } from "./too
 import { gitlabProjectsSearchHandler, gitlabProjectsSearchArgs } from "./tools/projects-search.js";
 import { gitlabMergeRequestsHandler, gitlabMergeRequestsArgs } from "./tools/merge-requests.js";
 import { gitlabMergeRequestDetailsHandler, gitlabMergeRequestDetailsArgs } from "./tools/merge-request-details.js";
+import { gitlabMergeRequestChangesHandler, gitlabMergeRequestChangesArgs } from "./tools/merge-request-changes.js";
+import { gitlabMergeRequestDiffHandler, gitlabMergeRequestDiffArgs } from "./tools/merge-request-diff.js";
 import { gitlabMergeRequestsSearchHandler, gitlabMergeRequestsSearchArgs } from "./tools/search.js";
 import { gitlabUsersHandler, gitlabUsersArgs } from "./tools/users.js";
 import { gitlabUserDetailsHandler, gitlabUserDetailsArgs } from "./tools/user-details.js";
@@ -154,6 +156,20 @@ export class GitlabMcpServer {
       "Get detailed information about a specific merge request by project and IID. Use for: Viewing full MR details including description and branches, checking MR freshness (recently merged), getting MR URL. Returns: All fields including sourceBranch, targetBranch, description, webUrl, fresh flag (true if merged within 24h).",
       gitlabMergeRequestDetailsArgs,
       async (args) => gitlabMergeRequestDetailsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_merge_request_changes",
+      "List changed files in a merge request. Use for: Quickly viewing changed files, analyzing MR scope. Supports pagination for large MRs (default 20 files per page, max 100). Returns: File paths (oldPath, newPath), change types (newFile, renamedFile, deletedFile). Parameters: briefOutput (default: true) controls whether to include diff content, includePaths/excludePaths arrays for exact path filtering (e.g., includePaths: ['src/index.ts', 'src/client.ts']).",
+      gitlabMergeRequestChangesArgs,
+      async (args) => gitlabMergeRequestChangesHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_merge_request_diff",
+      "Get full diff content with line-by-line changes for merge request files. Use for: Viewing actual code changes, analyzing specific file modifications, code review. Supports pagination (default 20 files per page, max 100) and exact path filtering. Returns: Complete diff text with +/- lines and change types. Parameters: filePath for single file (takes priority), includePaths/excludePaths arrays for multiple files (exact match, e.g., excludePaths: ['tests/unit.test.ts']). WARNING: May return large amounts of data - use pagination and filtering to limit response size. Consider using gitlab_merge_request_changes first to see file list before fetching full diffs.",
+      gitlabMergeRequestDiffArgs,
+      async (args) => gitlabMergeRequestDiffHandler(this.client, args),
     );
 
     // Search

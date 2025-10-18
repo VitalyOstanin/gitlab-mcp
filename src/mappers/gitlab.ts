@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import type { GitLabMergeRequest, GitLabProject, GitLabProjectTag, GitLabUser, GitLabMember, GitLabPipeline, GitLabJob } from "../gitlab/client.js";
+import type { GitLabMergeRequest, GitLabProject, GitLabProjectTag, GitLabUser, GitLabMember, GitLabPipeline, GitLabJob, GitLabMergeRequestDiffFile } from "../gitlab/client.js";
 import { getTimezone } from "../utils/date.js";
 
 /**
@@ -250,6 +250,58 @@ export function mapMergeRequest(mr: GitLabMergeRequest): MappedMergeRequest {
   };
 
   return mapped;
+}
+
+export interface MappedMergeRequestDiffFile {
+  oldPath: string;
+  newPath: string;
+  newFile: boolean;
+  renamedFile: boolean;
+  deletedFile: boolean;
+  aMode?: string;
+  bMode?: string;
+  diff?: string;
+  generatedFile?: boolean;
+}
+
+/**
+ * Map GitLab diff file to mapped format with optional fields
+ * @param file - GitLab diff file
+ * @param options - Options to control which fields to include
+ * @returns Mapped diff file
+ */
+export function mapMergeRequestDiffFile(
+  file: GitLabMergeRequestDiffFile,
+  options: { includeDiff?: boolean } = {},
+): MappedMergeRequestDiffFile {
+  const mapped: MappedMergeRequestDiffFile = {
+    oldPath: file.old_path,
+    newPath: file.new_path,
+    newFile: file.new_file,
+    renamedFile: file.renamed_file,
+    deletedFile: file.deleted_file,
+    aMode: file.a_mode,
+    bMode: file.b_mode,
+    generatedFile: file.generated_file,
+  };
+
+  // Include diff content if requested
+  if (options.includeDiff && file.diff) {
+    mapped.diff = file.diff;
+  }
+
+  return mapped;
+}
+
+/**
+ * Map GitLab diff file to brief format (without diff content)
+ * @param file - GitLab diff file
+ * @returns Brief mapped diff file
+ */
+export function mapMergeRequestDiffFileBrief(file: GitLabMergeRequestDiffFile): MappedMergeRequestDiffFile {
+  const mappedFile = mapMergeRequestDiffFile(file, { includeDiff: false });
+
+  return mappedFile;
 }
 
 export function mapUser(user: GitLabUser, options: { webUrl?: string } = {}): MappedUser {

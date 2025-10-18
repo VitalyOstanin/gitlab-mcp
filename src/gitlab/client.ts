@@ -80,6 +80,29 @@ export interface GitLabMergeRequest {
   web_url: string;
 }
 
+export interface GitLabMergeRequestDiffFile {
+  old_path: string;
+  new_path: string;
+  new_file: boolean;
+  renamed_file: boolean;
+  deleted_file: boolean;
+  a_mode?: string;
+  b_mode?: string;
+  diff?: string;
+  generated_file?: boolean;
+}
+
+export interface MergeRequestChangesFilter {
+  includePaths?: string[];
+  excludePaths?: string[];
+}
+
+export interface MergeRequestDiffFilter {
+  filePath?: string;
+  includePaths?: string[];
+  excludePaths?: string[];
+}
+
 export interface GitLabUser {
   id: number;
   username: string;
@@ -156,6 +179,16 @@ interface GetProjectsOptions extends GitLabProjectFilter {
 interface GetMergeRequestsOptions {
   filters?: z.infer<typeof mergeRequestFilterSchema>;
   pagination?: z.infer<typeof paginationSchema>;
+}
+
+interface GetMergeRequestChangesOptions {
+  filters?: MergeRequestChangesFilter;
+  pagination?: GitLabPagination;
+}
+
+interface GetMergeRequestDiffsOptions {
+  filters?: MergeRequestDiffFilter;
+  pagination?: GitLabPagination;
 }
 
 interface SearchMergeRequestsOptions {
@@ -534,6 +567,126 @@ export class GitLabClient {
     const mergeRequest = response.data;
 
     return mergeRequest;
+  }
+
+  /**
+   * Apply path filters to diff files (client-side filtering)
+   * @param files - Array of diff files to filter
+   * @param includePaths - Whitelist of exact paths to include
+   * @param excludePaths - Blacklist of exact paths to exclude
+   * @returns Filtered array of diff files
+   */
+  private filterDiffFiles(
+    files: GitLabMergeRequestDiffFile[],
+    includePaths?: string[],
+    excludePaths?: string[],
+  ): GitLabMergeRequestDiffFile[] {
+    let filtered = files;
+
+    // Apply include filter (whitelist) - exact match
+    if (includePaths && includePaths.length > 0) {
+      filtered = filtered.filter(
+        (file) => includePaths.includes(file.new_path) || includePaths.includes(file.old_path),
+      );
+    }
+
+    // Apply exclude filter (blacklist) - exact match
+    if (excludePaths && excludePaths.length > 0) {
+      filtered = filtered.filter(
+        (file) => !excludePaths.includes(file.new_path) && !excludePaths.includes(file.old_path),
+      );
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Get list of changed files in merge request
+   * @param projectId - Project ID
+   * @param mrIid - Merge request IID
+   * @param options - Filter and pagination options
+   * @returns Paginated response with changed files
+   */
+  async getMergeRequestChanges(
+    projectId: number,
+    mrIid: number,
+    options: GetMergeRequestChangesOptions = {},
+  ): Promise<PaginatedResponse<GitLabMergeRequestDiffFile[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    const params: Record<string, unknown> = {
+      page: pagination.page,
+      per_page: pagination.perPage,
+    };
+    const response = await this.request(() =>
+      this.axios.get<{ changes: GitLabMergeRequestDiffFile[] }>(
+        `/api/v4/projects/${projectId}/merge_requests/${mrIid}/changes`,
+        { params },
+      ),
+    );
+    let files = response.data.changes;
+
+    // Apply client-side filtering
+    if (options.filters?.includePaths || options.filters?.excludePaths) {
+      files = this.filterDiffFiles(files, options.filters.includePaths, options.filters.excludePaths);
+    }
+
+    const { headers } = response;
+    const paginationInfo = this.extractPaginationInfo(
+      headers as Record<string, string>,
+      pagination.page,
+      pagination.perPage,
+    );
+    const result = { data: files, pagination: paginationInfo };
+
+    return result;
+  }
+
+  /**
+   * Get full diff content for merge request
+   * @param projectId - Project ID
+   * @param mrIid - Merge request IID
+   * @param options - Filter and pagination options
+   * @returns Paginated response with diff files
+   */
+  async getMergeRequestDiffs(
+    projectId: number,
+    mrIid: number,
+    options: GetMergeRequestDiffsOptions = {},
+  ): Promise<PaginatedResponse<GitLabMergeRequestDiffFile[]>> {
+    const pagination = paginationSchema.parse(options.pagination ?? {});
+    // Handle filePath priority over other filters
+    let effectiveFilters = options.filters;
+
+    if (options.filters?.filePath) {
+      effectiveFilters = { includePaths: [options.filters.filePath] };
+    }
+
+    const params: Record<string, unknown> = {
+      page: pagination.page,
+      per_page: pagination.perPage,
+    };
+    const response = await this.request(() =>
+      this.axios.get<GitLabMergeRequestDiffFile[]>(
+        `/api/v4/projects/${projectId}/merge_requests/${mrIid}/diffs`,
+        { params },
+      ),
+    );
+    let files = response.data;
+
+    // Apply client-side filtering
+    if (effectiveFilters?.includePaths || effectiveFilters?.excludePaths) {
+      files = this.filterDiffFiles(files, effectiveFilters.includePaths, effectiveFilters.excludePaths);
+    }
+
+    const { headers } = response;
+    const paginationInfo = this.extractPaginationInfo(
+      headers as Record<string, string>,
+      pagination.page,
+      pagination.perPage,
+    );
+    const result = { data: files, pagination: paginationInfo };
+
+    return result;
   }
 
   async searchMergeRequests(options: SearchMergeRequestsOptions): Promise<PaginatedResponse<GitLabMergeRequest[]>> {

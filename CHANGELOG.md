@@ -7,10 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.2.0] - 2025-10-18
 - [0.1.3] - 2025-10-17
 - [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.2.0] - 2025-10-18
+
+### Added
+- Merge request tools for reviewing code changes with pagination and filtering:
+  - `gitlab_merge_request_changes` — list changed files (brief or detailed) with include/exclude path filters
+  - `gitlab_merge_request_diff` — get full diff content for files, optionally limited by path
+
+### Changed
+- README files updated to document new merge request tools and their capabilities
 
 ## [0.1.3] - 2025-10-17
 

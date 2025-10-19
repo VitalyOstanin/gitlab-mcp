@@ -78,6 +78,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `gitlab_user_details`: Get user details by ID or username
   - `gitlab_users_batch`: Batch user lookups (up to 50 users)
   - `gitlab_current_user`: Get current user information
+
+## [0.3.0] - 2025-10-19
+
+### Added
+- Commit browsing tools and CI job insights docs in README
+- Concurrency limiting rule in AGENTS.md (MutexPool pattern)
+
+### Changed
+- README files updated with MCP tool list alignment and CI notes
+
   - `gitlab_project_members`: List project members with access levels
   - `gitlab_group_members`: List group members with access levels
 - Project browsing and search

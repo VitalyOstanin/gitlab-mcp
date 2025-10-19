@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import pRetry from "p-retry";
 import semver from "semver";
 import { z } from "zod";
+import { MutexPool } from "@vitalyostanin/mutex-pool";
 
 import { loadConfig, type Config } from "../config/index.js";
 
@@ -223,12 +224,16 @@ export interface GitLabPipelineFilter extends GitLabPagination {
   ref?: string;
   status?: GitLabPipeline["status"];
   source?: string;
+  sha?: string;
+  scope?: string;
   orderBy?: "id" | "status" | "ref" | "updated_at" | "user_id";
   sort?: "asc" | "desc";
   updatedAfter?: string;
   updatedBefore?: string;
   username?: string;
   yamlErrors?: boolean;
+  createdAfter?: string;
+  createdBefore?: string;
 }
 
 export interface GitLabJobFilter extends GitLabPagination {
@@ -303,8 +308,8 @@ export interface GitLabJob {
   id: number;
   name: string;
   stage: string;
-  status: "created" | "pending" | "running" | "success" | "failed" |
-          "canceled" | "skipped" | "manual" | "scheduled";
+  status: "created" | "waiting_for_resource" | "preparing" | "pending" | "running" | "success" | "failed" |
+          "canceling" | "canceled" | "skipped" | "manual" | "scheduled";
   ref: string;
   tag: boolean;
   coverage?: string;
@@ -355,6 +360,68 @@ export interface GitLabJob {
   };
   artifacts_expire_at?: string;
   tag_list: string[];
+}
+
+// Commits API
+export interface GitLabCommitStats {
+  additions: number;
+  deletions: number;
+  total: number;
+}
+
+export interface GitLabCommit {
+  id: string;
+  short_id: string;
+  title: string;
+  message: string;
+  author_name: string;
+  author_email: string;
+  authored_date: string;
+  committer_name?: string;
+  committer_email?: string;
+  committed_date?: string;
+  web_url?: string;
+  parent_ids?: string[];
+  stats?: GitLabCommitStats;
+}
+
+export interface GitLabCommitStatus {
+  id: number;
+  name: string;
+  status: string;
+  created_at: string;
+  started_at?: string;
+  finished_at?: string;
+  allow_failure?: boolean;
+  coverage?: number;
+  author?: { id: number; name: string; username: string };
+  pipeline_id?: number;
+  ref?: string;
+  target_url?: string;
+  description?: string;
+}
+
+export interface GitLabCommitFilter extends GitLabPagination {
+  refName?: string;
+  since?: string;
+  until?: string;
+  path?: string;
+  author?: string;
+  firstParent?: boolean;
+  order?: 'default' | 'topo' | 'date';
+  withStats?: boolean;
+}
+
+export interface GitLabPipelineVariable { key: string; value: string; variable_type?: string; }
+
+export interface GitLabPipelineTestReportSummary {
+  total_time?: number;
+  total_count?: number;
+  success_count?: number;
+  failed_count?: number;
+  skipped_count?: number;
+  error_count?: number;
+  test_suites?: unknown[];
 }
 
 export class GitLabClient {
@@ -876,36 +943,50 @@ export class GitLabClient {
       throw new Error(errorMessage);
     }
 
-    // Execute requests in parallel
-    const results = await Promise.allSettled(userIds.map((userId) => this.getUser(userId)));
+    // Concurrency-limited parallelism per AGENTS.md (default limit: 10)
+    const pool = new MutexPool(10);
+    const results: Array<PromiseSettledResult<GitLabUser>> = new Array(userIds.length);
+
+    userIds.forEach((userId, index) => {
+      pool.start(async () => {
+        try {
+          const user = await this.getUser(userId);
+
+          results[index] = { status: "fulfilled", value: user } as const;
+        } catch (e) {
+          results[index] = { status: "rejected", reason: e } as const;
+        }
+      });
+    });
+
+    await pool.allJobsFinished();
+
     const users: GitLabUser[] = [];
     const notFound: Array<number | string> = [];
 
-    results.forEach((result, index) => {
+    for (const [index, result] of results.entries()) {
       if (result.status === "fulfilled") {
         users.push(result.value);
-      } else {
-        // Check if the error is 404 Not Found
-        const error = result.reason;
-
-        if (error instanceof Error && "response" in error) {
-          const axiosError = error as AxiosError;
-
-          if (axiosError.response?.status === 404) {
-            notFound.push(userIds[index]);
-          } else {
-            // Re-throw other errors
-            throw result.reason;
-          }
-        } else {
-          throw result.reason;
-        }
+        continue;
       }
-    });
 
-    const batchResult = { users, notFound };
+      // rejected branch
+      const error = result.reason as unknown;
 
-    return batchResult;
+      if (error instanceof Error && "response" in error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response && axiosError.response.status === 404) {
+          notFound.push(userIds[index]);
+        } else {
+          throw error;
+        }
+      } else {
+        throw error as Error;
+      }
+    }
+
+    return { users, notFound };
   }
 
   async getCurrentUser(): Promise<GitLabCurrentUser> {
@@ -936,6 +1017,80 @@ export class GitLabClient {
     const result = { data: members, pagination: paginationInfo };
 
     return result;
+  }
+
+  // Commits
+  async getCommits(projectId: number, options: Partial<GitLabCommitFilter> = {}): Promise<PaginatedResponse<GitLabCommit[]>> {
+    const pagination = paginationSchema.parse({ perPage: options.perPage, page: options.page });
+    const params: Record<string, unknown> = {
+      per_page: pagination.perPage,
+      page: pagination.page,
+    };
+
+    if (options.refName) params.ref_name = options.refName;
+    if (options.since) params.since = options.since;
+    if (options.until) params.until = options.until;
+    if (options.path) params.path = options.path;
+    if (options.author) params.author = options.author;
+    if (options.firstParent !== undefined) params.first_parent = options.firstParent;
+    if (options.order) params.order = options.order;
+    if (options.withStats !== undefined) params.with_stats = options.withStats;
+
+    const response = await this.request(() =>
+      this.axios.get<GitLabCommit[]>(`/api/v4/projects/${projectId}/repository/commits`, { params }),
+    );
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const result = { data, pagination: paginationInfo };
+
+    return result;
+  }
+
+  async getCommit(projectId: number, sha: string, withStats?: boolean): Promise<GitLabCommit> {
+    const response = await this.request(() => this.axios.get<GitLabCommit>(
+      `/api/v4/projects/${projectId}/repository/commits/${encodeURIComponent(sha)}`,
+      { params: withStats !== undefined ? { stats: withStats } : undefined },
+    ));
+
+    return response.data;
+  }
+
+  async getCommitDiff(projectId: number, sha: string, pagination: GitLabPagination = {}): Promise<PaginatedResponse<GitLabMergeRequestDiffFile[]>> {
+    const parsed = paginationSchema.parse(pagination);
+    const response = await this.request(() => this.axios.get<GitLabMergeRequestDiffFile[]>(
+      `/api/v4/projects/${projectId}/repository/commits/${encodeURIComponent(sha)}/diff`,
+      { params: { per_page: parsed.perPage, page: parsed.page } },
+    ));
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, parsed.page, parsed.perPage);
+
+    return { data, pagination: paginationInfo };
+  }
+
+  async getCommitStatuses(projectId: number, sha: string, options: GitLabPagination & {
+    all?: boolean; name?: string; orderBy?: 'id' | 'updated_at'; pipelineId?: number; ref?: string; sort?: 'asc' | 'desc';
+  } = {}): Promise<PaginatedResponse<GitLabCommitStatus[]>> {
+    const parsed = paginationSchema.parse(options);
+    const params: Record<string, unknown> = {
+      per_page: parsed.perPage,
+      page: parsed.page,
+    };
+
+    if (options.all !== undefined) params.all = options.all;
+    if (options.name) params.name = options.name;
+    if (options.orderBy) params.order_by = options.orderBy;
+    if (options.pipelineId) params.pipeline_id = options.pipelineId;
+    if (options.ref) params.ref = options.ref;
+    if (options.sort) params.sort = options.sort;
+
+    const response = await this.request(() => this.axios.get<GitLabCommitStatus[]>(
+      `/api/v4/projects/${projectId}/repository/commits/${encodeURIComponent(sha)}/statuses`,
+      { params },
+    ));
+    const { data, headers } = response;
+    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, parsed.page, parsed.perPage);
+
+    return { data, pagination: paginationInfo };
   }
 
   async getGroupMembers(groupId: number | string, options: GetGroupMembersOptions = {}): Promise<PaginatedResponse<GitLabMember[]>> {
@@ -981,6 +1136,14 @@ export class GitLabClient {
       params.source = filters.source;
     }
 
+    if (filters.sha) {
+      params.sha = filters.sha;
+    }
+
+    if (filters.scope) {
+      params.scope = filters.scope;
+    }
+
     if (filters.orderBy) {
       params.order_by = filters.orderBy;
     }
@@ -1005,6 +1168,14 @@ export class GitLabClient {
       params.yaml_errors = filters.yamlErrors;
     }
 
+    if (filters.createdAfter) {
+      params.created_after = filters.createdAfter;
+    }
+
+    if (filters.createdBefore) {
+      params.created_before = filters.createdBefore;
+    }
+
     const response = await this.request(() =>
       this.axios.get<GitLabPipeline[]>(`/api/v4/projects/${projectId}/pipelines`, {
         params,
@@ -1015,6 +1186,31 @@ export class GitLabClient {
     const result = { data, pagination: paginationInfo };
 
     return result;
+  }
+
+  // Pipeline variables
+  async getPipelineVariables(projectId: number, pipelineId: number): Promise<GitLabPipelineVariable[]> {
+    const response = await this.request(() =>
+      this.axios.get<GitLabPipelineVariable[]>(`/api/v4/projects/${projectId}/pipelines/${pipelineId}/variables`),
+    );
+
+    return response.data;
+  }
+
+  // Pipeline test report (summary-focused)
+  async getPipelineTestReport(projectId: number, pipelineId: number): Promise<GitLabPipelineTestReportSummary> {
+    const response = await this.request(() =>
+      this.axios.get<GitLabPipelineTestReportSummary>(`/api/v4/projects/${projectId}/pipelines/${pipelineId}/test_report`),
+    );
+
+    return response.data;
+  }
+
+  createJobArtifactsDownloadUrl(projectPath: string, jobId: number | string): string {
+    const baseUrl = this.getBaseUrl();
+    const url = new URL(`${projectPath}/-/jobs/${jobId}/artifacts/download`, baseUrl);
+
+    return url.toString();
   }
 
   async getPipeline(projectId: number, pipelineId: number): Promise<GitLabPipeline> {
@@ -1100,6 +1296,38 @@ export class GitLabClient {
     const job = response.data;
 
     return job;
+  }
+
+  async getJobTraceRange(projectId: number, jobId: number, bytesStart?: number, bytesEnd?: number): Promise<{
+    content: string;
+    partial: boolean;
+    totalBytes?: number;
+    contentRange?: string;
+  }> {
+    const headers: Record<string, string> = {};
+
+    if (!(bytesStart === undefined && bytesEnd === undefined)) {
+      const start = bytesStart ?? 0;
+      const end = bytesEnd ?? '';
+
+      headers.Range = `bytes=${start}-${end}`;
+    }
+
+    const response = await this.request(() => this.axios.get<string>(
+      `/api/v4/projects/${projectId}/jobs/${jobId}/trace`,
+      { headers, responseType: "text" as const },
+    ));
+    const { status, headers: respHeaders } = response as unknown as { status: number; headers: Record<string, string> };
+    const contentRange = respHeaders["content-range"];
+    const totalBytes = contentRange ? Number(contentRange.split("/")[1]) : undefined;
+    const partial = status === 206 || Boolean(contentRange);
+
+    return {
+      content: response.data,
+      partial,
+      totalBytes: Number.isFinite(totalBytes) ? totalBytes : undefined,
+      contentRange,
+    };
   }
 
   createPipelineUrl(projectPath: string, pipelineId: number | string): string {

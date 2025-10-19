@@ -40,6 +40,11 @@
   - [Section 2](#section-2)
   ```
 
+### TOC Exception for Robot-Facing Markdown
+- Robot-facing instruction files do not require a TOC to stay compact for agent ingestion and reduce noise.
+- Applies to: `AGENTS.md`, `CLAUDE.md`, and other docs intended primarily for AI agents (e.g., files under `.code/agents/`, `.claude/`).
+- Human-facing documentation (e.g., `README.md`, `README-ru.md`, `README-release.md`, `CHANGELOG.md`) must continue to include a TOC.
+
 ## Project Structure
 - `src/`: TypeScript sources for the MCP server, GitLab client, and tool registrations.
 - `dist/`: Compiled JavaScript emitted by `npm run build` (ignored by git).
@@ -281,3 +286,11 @@ this.gitlabMcpServer.registerTool(
 
 ## Build Artifacts
 - Only `dist/` should contain compiled assets; do not commit build output.
+
+## Brief Mode and Context Optimization
+- Prefer `briefOutput=true` by default for content-heavy tools (diffs, large lists) to minimize MCP payload size and keep responses within context limits.
+- Provide paired mappers: full and brief. Brief mappers must omit bulky fields like raw `diff` text, large descriptions, and oversized arrays where possible.
+- Always include a concise `summary` and `fallbackText` in tool responses via `toolSuccess` so clients with limited rendering still convey essential info.
+- When pagination is present, include `pagination.count` and `hasMore` flags. In brief mode, truncate preview lists sensibly (e.g., first 20 items) and indicate truncation.
+- Document `briefOutput` in every applicable tool schema with a clear default and behavior description.
+- For tables or repeated structures, prefer ID, title/name, status, and URL fields in brief mode, deferring verbose fields to full mode on demand.

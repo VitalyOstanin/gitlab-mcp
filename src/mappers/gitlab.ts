@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import type { GitLabMergeRequest, GitLabProject, GitLabProjectTag, GitLabUser, GitLabMember, GitLabPipeline, GitLabJob, GitLabMergeRequestDiffFile } from "../gitlab/client.js";
+import type { GitLabMergeRequest, GitLabProject, GitLabProjectTag, GitLabUser, GitLabMember, GitLabPipeline, GitLabJob, GitLabMergeRequestDiffFile, GitLabCommit, GitLabCommitStatus } from "../gitlab/client.js";
 import { getTimezone } from "../utils/date.js";
 
 /**
@@ -198,6 +198,30 @@ export interface MappedJob {
     active: boolean;
     isShared: boolean;
   };
+}
+
+export interface MappedCommit {
+  id: string;
+  shortId: string;
+  title: string;
+  authorName: string;
+  authoredDate: string;
+  webUrl?: string;
+  parentIds?: string[];
+  stats?: { additions: number; deletions: number; total: number };
+}
+
+export interface MappedCommitStatus {
+  id: number;
+  name: string;
+  status: string;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  pipelineId?: number;
+  ref?: string;
+  targetUrl?: string;
+  description?: string;
 }
 
 export function mapProject(project: GitLabProject, options: { webUrl?: string } = {}): MappedProject {
@@ -412,6 +436,47 @@ export function mapJob(job: GitLabJob): MappedJob {
       active: job.runner.active,
       isShared: job.runner.is_shared,
     } : undefined,
+  };
+
+  return mapped;
+}
+
+export function mapCommit(commit: GitLabCommit): MappedCommit {
+  const mapped = {
+    id: commit.id,
+    shortId: commit.short_id,
+    title: commit.title,
+    authorName: commit.author_name,
+    authoredDate: formatDatetime(commit.authored_date) ?? commit.authored_date,
+    webUrl: commit.web_url,
+    parentIds: commit.parent_ids,
+    stats: commit.stats ? {
+      additions: commit.stats.additions,
+      deletions: commit.stats.deletions,
+      total: commit.stats.total,
+    } : undefined,
+  };
+
+  return mapped;
+}
+
+export function mapCommitBrief(commit: GitLabCommit): MappedCommit {
+  // identical to mapCommit but without stats by default; caller decides
+  return mapCommit(commit);
+}
+
+export function mapCommitStatus(status: GitLabCommitStatus): MappedCommitStatus {
+  const mapped = {
+    id: status.id,
+    name: status.name,
+    status: status.status,
+    createdAt: formatDatetime(status.created_at) ?? status.created_at,
+    startedAt: formatDatetime(status.started_at),
+    finishedAt: formatDatetime(status.finished_at),
+    pipelineId: status.pipeline_id,
+    ref: status.ref,
+    targetUrl: status.target_url,
+    description: status.description,
   };
 
   return mapped;

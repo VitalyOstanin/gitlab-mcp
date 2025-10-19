@@ -176,12 +176,21 @@ env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-you
 | `gitlab_current_user` | Информация о текущем пользователе (владелец токена). |
 | `gitlab_project_members` | Список участников проекта с уровнями доступа. |
 | `gitlab_group_members` | Список участников группы с уровнями доступа. |
-| `gitlab_pipelines` | Список пайплайнов проекта с фильтрами и пагинацией. |
+| `gitlab_pipelines` | Список пайплайнов проекта с фильтрами и пагинацией (ref, status, scope, интервалы created/updated, sha). |
 | `gitlab_pipeline_details` | Подробная информация о пайплайне по проекту и ID пайплайна. |
 | `gitlab_pipeline_jobs` | Список задач конкретного пайплайна с фильтрами. |
+| `gitlab_pipeline_variables` | Список переменных пайплайна (в brief-режиме только ключи). |
+| `gitlab_pipeline_test_report` | Краткий отчёт по тестам пайплайна (в brief — только суммарные метрики). |
 | `gitlab_project_jobs` | Список всех задач проекта с фильтрами по статусу. |
 | `gitlab_job_details` | Подробная информация о задаче по проекту и ID задачи. |
+| `gitlab_job_trace` | Ссылка и краткая информация о логе задачи (build log). |
+| `gitlab_job_trace_download` | Загрузка части лога задачи по HTTP Range с ограничением размера. |
 | `gitlab_latest_pipeline` | Получение последнего пайплайна для ветки (по умолчанию: ветка по умолчанию). |
+
+| `gitlab_commits` | Список коммитов проекта с фильтрами и пагинацией (по умолчанию brief). |
+| `gitlab_commit_details` | Детальная информация о конкретном коммите по SHA. |
+| `gitlab_commit_diff` | Файлы diff для коммита (по умолчанию brief; полный diff опционально). |
+| `gitlab_commit_statuses` | Список CI-статусов коммита (по контекстам/пайплайнам). |
 
 ### Режим только для чтения vs Режим записи
 

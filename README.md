@@ -269,12 +269,21 @@ To use this MCP server with [Cline](https://github.com/cline/cline) extension in
 | `gitlab_current_user` | Get current user information (token owner). |
 | `gitlab_project_members` | List project members with access levels. |
 | `gitlab_group_members` | List group members with access levels. |
-| `gitlab_pipelines` | List project pipelines with filters and pagination. |
+| `gitlab_pipelines` | List project pipelines with filters and pagination (ref, status, scope, created/updated windows, sha). |
 | `gitlab_pipeline_details` | Get detailed pipeline information by project and pipeline ID. |
 | `gitlab_pipeline_jobs` | List jobs for a specific pipeline with filters. |
+| `gitlab_pipeline_variables` | List variables resolved for a pipeline (brief mode shows keys only). |
+| `gitlab_pipeline_test_report` | Get pipeline test report summary (brief mode shows summary metrics). |
 | `gitlab_project_jobs` | List all jobs for a project with status filters. |
 | `gitlab_job_details` | Get detailed job information by project and job ID. |
+| `gitlab_job_trace` | Get URL and brief preview info for a job trace (build log). |
+| `gitlab_job_trace_download` | Download a slice of a job trace using HTTP Range with size limits. |
 | `gitlab_latest_pipeline` | Get the latest pipeline for a branch (default: default branch). |
+
+| `gitlab_commits` | List commits for a project with filters and pagination (brief mode default). |
+| `gitlab_commit_details` | Get detailed information about a specific commit by SHA. |
+| `gitlab_commit_diff` | Get commit diff files (brief mode default; full diff optional). |
+| `gitlab_commit_statuses` | List CI statuses for a commit (by context/pipeline). |
 
 ### Read-Only vs Write Mode
 

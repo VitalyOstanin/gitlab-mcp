@@ -27,6 +27,14 @@ import { gitlabPipelineJobsHandler, gitlabPipelineJobsArgs } from "./tools/pipel
 import { gitlabProjectJobsHandler, gitlabProjectJobsArgs } from "./tools/project-jobs.js";
 import { gitlabJobDetailsHandler, gitlabJobDetailsArgs } from "./tools/job-details.js";
 import { gitlabLatestPipelineHandler, gitlabLatestPipelineArgs } from "./tools/latest-pipeline.js";
+import { gitlabPipelineVariablesHandler, gitlabPipelineVariablesArgs } from "./tools/pipeline-variables.js";
+import { gitlabPipelineTestReportHandler, gitlabPipelineTestReportArgs } from "./tools/pipeline-test-report.js";
+import { gitlabJobTraceHandler, gitlabJobTraceArgs } from "./tools/job-trace.js";
+import { gitlabJobTraceDownloadHandler, gitlabJobTraceDownloadArgs } from "./tools/job-trace-download.js";
+import { gitlabCommitsHandler, gitlabCommitsArgs } from "./tools/commits.js";
+import { gitlabCommitDetailsHandler, gitlabCommitDetailsArgs } from "./tools/commit-details.js";
+import { gitlabCommitDiffHandler, gitlabCommitDiffArgs } from "./tools/commit-diff.js";
+import { gitlabCommitStatusesHandler, gitlabCommitStatusesArgs } from "./tools/commit-statuses.js";
 
 export class GitlabMcpServer {
   private readonly gitlabMcpServer: McpServer;
@@ -72,7 +80,7 @@ export class GitlabMcpServer {
     // Service info
     this.gitlabMcpServer.tool(
       "service_info",
-      "Get GitLab MCP integration status and environment configuration",
+      "Get GitLab MCP integration status and environment configuration. Use for: Quick sanity check that MCP is configured and reachable. Returns: name, gitlabUrl, tokenPresent (boolean), timezone, filters (namespace/membership), and server version.",
       {},
       async () => {
         try {
@@ -105,7 +113,7 @@ export class GitlabMcpServer {
 
     this.gitlabMcpServer.tool(
       "gitlab_project_details",
-      "Get detailed information about a specific GitLab project",
+      "Get detailed information about a specific GitLab project. Use for: Inspecting project metadata prior to browsing MRs/tags. Parameters: project (ID or path, e.g., 123 or 'group/name'). Returns: id, names, pathWithNamespace, description, lastActivityAt, archived, webUrl.",
       gitlabProjectDetailsArgs,
       async (args) => gitlabProjectDetailsHandler(this.client, args),
     );
@@ -246,6 +254,13 @@ export class GitlabMcpServer {
     );
 
     this.gitlabMcpServer.tool(
+      "gitlab_pipeline_variables",
+      "List variables for a specific pipeline. Use for: inspecting CI variables resolved at pipeline runtime.",
+      gitlabPipelineVariablesArgs,
+      async (args) => gitlabPipelineVariablesHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
       "gitlab_project_jobs",
       "List all jobs for a project with filters and pagination. Use for: Browsing project jobs across all pipelines, filtering by job status (e.g., 'failed', 'running'), analyzing CI/CD job history. Returns: Job details with pipeline references. Supports pagination (default 50, max 100 per page).",
       gitlabProjectJobsArgs,
@@ -260,10 +275,60 @@ export class GitlabMcpServer {
     );
 
     this.gitlabMcpServer.tool(
+      "gitlab_job_trace",
+      "Get URL and brief preview info for a job trace (build log). Use for: quickly locating and fetching the full job log without embedding large text payloads in MCP response.",
+      gitlabJobTraceArgs,
+      async (args) => gitlabJobTraceHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_job_trace_download",
+      "Download a slice of a job trace (build log) using HTTP Range. Use for: fetching partial logs without overloading MCP payload. Parameters: maxBytes (default 500k, max 5MB), fromByte offset.",
+      gitlabJobTraceDownloadArgs,
+      async (args) => gitlabJobTraceDownloadHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
       "gitlab_latest_pipeline",
       "Get the latest pipeline for a specific branch or default branch. Use for: Checking current CI/CD status of a branch, getting latest build results, monitoring recent pipeline execution. Returns: Latest pipeline details with status and URL. Useful for quick status checks.",
       gitlabLatestPipelineArgs,
       async (args) => gitlabLatestPipelineHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_pipeline_test_report",
+      "Get test report summary for a pipeline. Use for: CI test pass/fail counts and total time. In brief mode shows only summary.",
+      gitlabPipelineTestReportArgs,
+      async (args) => gitlabPipelineTestReportHandler(this.client, args),
+    );
+
+    // Commits
+    this.gitlabMcpServer.tool(
+      "gitlab_commits",
+      "List commits for a project with filters and pagination. Use for: browsing recent changes on a branch/tag, filtering by time range or author. Returns: id, shortId, title, author, dates, parentIds; includes stats when requested. Supports pagination (default 50, max 100).",
+      gitlabCommitsArgs,
+      async (args) => gitlabCommitsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_commit_details",
+      "Get detailed information about a specific commit by SHA. Use for: viewing commit metadata and optional stats.",
+      gitlabCommitDetailsArgs,
+      async (args) => gitlabCommitDetailsHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_commit_diff",
+      "Get commit diff files with optional brief mode (no raw diff). Use for: quick overview of changed files in a commit. Supports pagination (default 20, max 100). WARNING: Full diff can be large; prefer briefOutput unless needed.",
+      gitlabCommitDiffArgs,
+      async (args) => gitlabCommitDiffHandler(this.client, args),
+    );
+
+    this.gitlabMcpServer.tool(
+      "gitlab_commit_statuses",
+      "List statuses for a commit (CI checks). Use for: viewing per-context statuses, filtering by pipeline, ordering by time. Supports pagination (default 50, max 100).",
+      gitlabCommitStatusesArgs,
+      async (args) => gitlabCommitStatusesHandler(this.client, args),
     );
   }
 }

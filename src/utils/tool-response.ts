@@ -30,7 +30,12 @@ export function toolError(error: unknown): CallToolResult {
       },
     } as Record<string, unknown>;
     const result = {
-      content: [],
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(structuredContent, null, 2),
+        },
+      ],
       isError: true,
       structuredContent,
     };
@@ -47,7 +52,12 @@ export function toolError(error: unknown): CallToolResult {
       },
     } as Record<string, unknown>;
     const result = {
-      content: [],
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(structuredContent, null, 2),
+        },
+      ],
       isError: true,
       structuredContent,
     };
@@ -64,7 +74,12 @@ export function toolError(error: unknown): CallToolResult {
     },
   } as Record<string, unknown>;
   const result = {
-    content: [],
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(structuredContent, null, 2),
+      },
+    ],
     isError: true,
     structuredContent,
   };

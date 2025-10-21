@@ -12,13 +12,22 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
+  - [Using npx (Recommended)](#using-npx-recommended)
+  - [Using Claude MCP CLI](#using-claude-mcp-cli)
+  - [Manual Installation (Development)](#manual-installation-development)
 - [Development & Release](#development--release)
+  - [GitHub Actions Workflows](#github-actions-workflows)
+  - [Setting up NPM_TOKEN](#setting-up-npm_token)
+  - [Release Process](#release-process)
+  - [Manual Build & Test](#manual-build--test)
 - [Running the server (stdio)](#running-the-server-stdio)
 - [Configuration for Code (Recommended)](#configuration-for-code-recommended)
 - [Configuration for Claude Code CLI](#configuration-for-claude-code-cli)
 - [Configuration for VS Code Cline](#configuration-for-vs-code-cline)
 - [MCP Tools](#mcp-tools)
- - [Response Format](#response-format)
+  - [Read-Only vs Write Mode](#read-only-vs-write-mode)
+  - [Tool Usage Guidelines](#tool-usage-guidelines)
+- [Response Format](#response-format)
 
 ## Features
 

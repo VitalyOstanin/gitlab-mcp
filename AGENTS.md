@@ -288,6 +288,16 @@ this.gitlabMcpServer.registerTool(
 - Tool descriptions in code should be self-sufficient for AI agents to understand usage
 - Keep README focused on installation, configuration, and high-level feature overview
 
+### README Review Rule
+- After any README changes (English or Russian), perform a structured review before commit:
+  - Verify TOC correctness: anchors, order, and inclusion of all H2/H3.
+  - Check for duplicated lines/sections and orphan anchors.
+  - Validate internal cross-links and external URLs (syntax and target sections exist).
+  - Ensure section headings use consistent casing and terminology across both READMEs.
+  - Ensure human-facing READMEs do not include raw tool invocation examples (policy above).
+  - Run the TOC verification snippet from README-release.md and fix mismatches.
+  - Keep READMEs aligned feature-wise (changes in one must be reflected in the other).
+
 ## Build Artifacts
 - Only `dist/` should contain compiled assets; do not commit build output.
 

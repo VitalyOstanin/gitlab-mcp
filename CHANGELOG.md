@@ -7,11 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.4.0] - 2025-10-21
+- [0.3.0] - 2025-10-19
 - [0.2.0] - 2025-10-18
 - [0.1.3] - 2025-10-17
 - [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.4.0] - 2025-10-21
+
+### Added
+- Merge request diff tool: `briefOutput` support with safer defaults.
+- Job trace download improvements: safer defaults and ranged download handling.
+- Structured content response helpers and documentation alignment.
+
+### Changed
+- Normalized tool headers/descriptions across docs.
+- README and README-ru: refreshed TOCs and anchors; removed duplicate entry in Russian README.
+- AGENTS.md: added README review workflow rule.
+
+### Documentation
+- Added “README Review Rule” to AGENTS.md (TOC checks, duplicates, links, heading consistency, cross-language alignment).
+- Clarified response format notes in README tool tables.
 
 ## [0.2.0] - 2025-10-18
 

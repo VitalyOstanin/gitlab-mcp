@@ -295,8 +295,15 @@ this.gitlabMcpServer.registerTool(
   - Validate internal cross-links and external URLs (syntax and target sections exist).
   - Ensure section headings use consistent casing and terminology across both READMEs.
   - Ensure human-facing READMEs do not include raw tool invocation examples (policy above).
-  - Run the TOC verification snippet from README-release.md and fix mismatches.
-  - Keep READMEs aligned feature-wise (changes in one must be reflected in the other).
+- Run the TOC verification snippet from README-release.md and fix mismatches.
+- Keep READMEs aligned feature-wise (changes in one must be reflected in the other).
+
+### Changelog Policy
+- For any release-related changes, update `CHANGELOG.md` before tagging:
+  - Add a new version section with date in `YYYY-MM-DD` and entries under Added/Changed/Fixed/Docs.
+  - Update the `## Table of Contents` block to include the new version heading.
+  - Ensure entries accurately reflect code and documentation changes since the previous tag.
+  - Keep entries concise and user-focused; link to PRs/tags where applicable.
 
 ## Build Artifacts
 - Only `dist/` should contain compiled assets; do not commit build output.

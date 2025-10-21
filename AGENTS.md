@@ -201,10 +201,11 @@ Run test: `npx tsx temp/test-mutex-pool.ts`
 Expected output should show that no more than 3 tasks run concurrently.
 
 ## MCP Response Format for Claude Code
-- Claude Code reads data from the MCP `content` field, so every tool response must serialize its payload there.
-- The `content` array should include at least one `text` item containing the JSON stringified payload for compatibility.
-- Continue providing `structuredContent` for richer clients, but never rely on it alone.
-- Use `toolSuccess` in `src/utils/tool-response.ts` to ensure both `content` and `structuredContent` are populated consistently.
+- The server returns exactly one data node by default, controlled via `GITLAB_USE_STRUCTURED_CONTENT` (default: `"true"`).
+- When `true`: return only `structuredContent` with full data, and include an empty `content: []` to satisfy MCP typing.
+- When `false`: return only `content` (single `text` item with JSON string); omit `structuredContent`.
+- For errors, always set `isError: true` and apply the same single-node rule (i.e., empty `content` with `structuredContent` when `true`, or text `content` when `false`).
+- Use `toolSuccess`/`toolError` in `src/utils/tool-response.ts` to keep behavior consistent.
 
 ## MCP Tooling Expectations
 - Implement pagination for every MCP tool that may return large result sets; every tool must expose explicit pagination parameters and defaults in the schema.
@@ -293,7 +294,6 @@ this.gitlabMcpServer.registerTool(
 ## Brief Mode and Context Optimization
 - Prefer `briefOutput=true` by default for content-heavy tools (diffs, large lists) to minimize MCP payload size and keep responses within context limits.
 - Provide paired mappers: full and brief. Brief mappers must omit bulky fields like raw `diff` text, large descriptions, and oversized arrays where possible.
-- Always include a concise `summary` and `fallbackText` in tool responses via `toolSuccess` so clients with limited rendering still convey essential info.
 - When pagination is present, include `pagination.count` and `hasMore` flags. In brief mode, truncate preview lists sensibly (e.g., first 20 items) and indicate truncation.
 - Document `briefOutput` in every applicable tool schema with a clear default and behavior description.
 - For tables or repeated structures, prefer ID, title/name, status, and URL fields in brief mode, deferring verbose fields to full mode on demand.

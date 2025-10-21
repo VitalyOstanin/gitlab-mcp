@@ -1,5 +1,4 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
-import pRetry from "p-retry";
+import axios, { type AxiosError, type AxiosInstance } from "axios";
 import semver from "semver";
 import { z } from "zod";
 import { MutexPool } from "@vitalyostanin/mutex-pool";
@@ -447,19 +446,29 @@ export class GitLabClient {
     });
   }
 
+  private normalizeHeaders(headers: unknown): Record<string, string> {
+    const out: Record<string, string> = {};
+
+    if (headers && typeof headers === "object") {
+      for (const [key, value] of Object.entries(headers as Record<string, unknown>)) {
+        const k = key.toLowerCase();
+
+        if (typeof value === "string") {
+          out[k] = value;
+        } else if (Array.isArray(value)) {
+          out[k] = value.join(", ");
+        } else if (value != null) {
+          out[k] = String(value);
+        }
+      }
+    }
+
+    return out;
+  }
+
   private async request<T>(fn: () => Promise<T>): Promise<T> {
-    const result = await pRetry(fn, {
-      retries: GitLabClient.RETRY_CONFIG.MAX_RETRIES,
-      factor: GitLabClient.RETRY_CONFIG.BACKOFF_FACTOR,
-      minTimeout: GitLabClient.RETRY_CONFIG.MIN_TIMEOUT_MS,
-      onFailedAttempt: (error) => {
-        const baseMessage = error instanceof AxiosError ? this.describeAxiosError(error) : error.message;
-
-        process.stderr.write(`GitLab request failed (${error.attemptNumber}/${error.retriesLeft} left): ${baseMessage}\n`);
-      },
-    });
-
-    return result;
+    // No automatic retries: delegated to clients/AI assistant
+    return fn();
   }
 
   private describeAxiosError(error: AxiosError): string {
@@ -529,7 +538,8 @@ export class GitLabClient {
       }),
     );
     const { data: projects, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const namespaceWhitelist = options.namespaceWhitelist ?? this.config.filters.includeNamespaces;
     const filtered = this.filterProjectsByNamespace(projects, namespaceWhitelist);
     const result = { data: filtered, pagination: paginationInfo };
@@ -558,7 +568,8 @@ export class GitLabClient {
       }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, parsed.page, parsed.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, parsed.page, parsed.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -623,7 +634,8 @@ export class GitLabClient {
       }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -698,8 +710,9 @@ export class GitLabClient {
     }
 
     const { headers } = response;
+    const normalized = this.normalizeHeaders(headers);
     const paginationInfo = this.extractPaginationInfo(
-      headers as Record<string, string>,
+      normalized,
       pagination.page,
       pagination.perPage,
     );
@@ -746,8 +759,9 @@ export class GitLabClient {
     }
 
     const { headers } = response;
+    const normalized = this.normalizeHeaders(headers);
     const paginationInfo = this.extractPaginationInfo(
-      headers as Record<string, string>,
+      normalized,
       pagination.page,
       pagination.perPage,
     );
@@ -783,7 +797,8 @@ export class GitLabClient {
       }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -803,7 +818,8 @@ export class GitLabClient {
       }),
     );
     const { data: projects, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     // Apply namespace whitelist filter
     const namespaceWhitelist = this.config.filters.includeNamespaces;
     const filtered = this.filterProjectsByNamespace(projects, namespaceWhitelist);
@@ -895,7 +911,8 @@ export class GitLabClient {
       }),
     );
     const { data: users, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data: users, pagination: paginationInfo };
 
     return result;
@@ -948,7 +965,7 @@ export class GitLabClient {
     const results: Array<PromiseSettledResult<GitLabUser>> = new Array(userIds.length);
 
     userIds.forEach((userId, index) => {
-      pool.start(async () => {
+      void pool.start(async () => {
         try {
           const user = await this.getUser(userId);
 
@@ -1013,7 +1030,8 @@ export class GitLabClient {
       }),
     );
     const { data: members, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data: members, pagination: paginationInfo };
 
     return result;
@@ -1040,7 +1058,8 @@ export class GitLabClient {
       this.axios.get<GitLabCommit[]>(`/api/v4/projects/${projectId}/repository/commits`, { params }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -1062,7 +1081,8 @@ export class GitLabClient {
       { params: { per_page: parsed.perPage, page: parsed.page } },
     ));
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, parsed.page, parsed.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, parsed.page, parsed.perPage);
 
     return { data, pagination: paginationInfo };
   }
@@ -1088,7 +1108,8 @@ export class GitLabClient {
       { params },
     ));
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, parsed.page, parsed.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, parsed.page, parsed.perPage);
 
     return { data, pagination: paginationInfo };
   }
@@ -1110,7 +1131,8 @@ export class GitLabClient {
       }),
     );
     const { data: members, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data: members, pagination: paginationInfo };
 
     return result;
@@ -1182,7 +1204,8 @@ export class GitLabClient {
       }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -1260,7 +1283,8 @@ export class GitLabClient {
       }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -1283,7 +1307,8 @@ export class GitLabClient {
       }),
     );
     const { data, headers } = response;
-    const paginationInfo = this.extractPaginationInfo(headers as Record<string, string>, pagination.page, pagination.perPage);
+    const normalized = this.normalizeHeaders(headers);
+    const paginationInfo = this.extractPaginationInfo(normalized, pagination.page, pagination.perPage);
     const result = { data, pagination: paginationInfo };
 
     return result;
@@ -1317,8 +1342,9 @@ export class GitLabClient {
       `/api/v4/projects/${projectId}/jobs/${jobId}/trace`,
       { headers, responseType: "text" as const },
     ));
-    const { status, headers: respHeaders } = response as unknown as { status: number; headers: Record<string, string> };
-    const contentRange = respHeaders["content-range"];
+    const { status, headers: respHeaders } = response;
+    const normalized = this.normalizeHeaders(respHeaders);
+    const contentRange = normalized["content-range"];
     const totalBytes = contentRange ? Number(contentRange.split("/")[1]) : undefined;
     const partial = status === 206 || Boolean(contentRange);
 

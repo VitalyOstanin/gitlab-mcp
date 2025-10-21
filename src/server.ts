@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import packageJson from "../package.json" with { type: "json" };
 
 import { GitLabClient } from "./gitlab/index.js";
-import { toolError, toolSuccess } from "./utils/tool-response.js";
+import { toolError, toolSuccess, setDefaultUseStructuredContent } from "./utils/tool-response.js";
 import { initializeTimezone } from "./utils/date.js";
 import { loadConfig } from "./config/index.js";
 import { gitlabProjectsHandler, gitlabProjectsArgs } from "./tools/projects.js";
@@ -67,6 +67,7 @@ export class GitlabMcpServer {
     const config = loadConfig();
 
     initializeTimezone(config.timezone);
+    setDefaultUseStructuredContent(config.useStructuredContent);
     this.client = new GitLabClient();
 
     this.registerTools();
@@ -92,6 +93,7 @@ export class GitlabMcpServer {
             timezone: config.timezone,
             filters: config.filters,
             version: this.version,
+            useStructuredContent: config.useStructuredContent,
           });
 
           return result;
@@ -175,7 +177,7 @@ export class GitlabMcpServer {
 
     this.gitlabMcpServer.tool(
       "gitlab_merge_request_diff",
-      "Get full diff content with line-by-line changes for merge request files. Use for: Viewing actual code changes, analyzing specific file modifications, code review. Supports pagination (default 20 files per page, max 100) and exact path filtering. Returns: Complete diff text with +/- lines and change types. Parameters: filePath for single file (takes priority), includePaths/excludePaths arrays for multiple files (exact match, e.g., excludePaths: ['tests/unit.test.ts']). WARNING: May return large amounts of data - use pagination and filtering to limit response size. Consider using gitlab_merge_request_changes first to see file list before fetching full diffs.",
+      "Get diff content for merge request files. Use for: Viewing actual code changes, analyzing specific file modifications, code review. Supports pagination (default 20, max 100) и фильтрацию по путям. Parameters: briefOutput (default: true) to omit raw diff for compact overview; filePath for a single file (priority), includePaths/excludePaths for multiple files. WARNING: Full diffs can be large — prefer briefOutput or narrow by filePath/includePaths.",
       gitlabMergeRequestDiffArgs,
       async (args) => gitlabMergeRequestDiffHandler(this.client, args),
     );

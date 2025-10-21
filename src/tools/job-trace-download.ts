@@ -70,8 +70,13 @@ export async function gitlabJobTraceDownloadHandler(client: GitLabClient, rawInp
 
     await pipeline(response.data, counter, writeStream);
 
-    const { headers: respHeaders } = response as unknown as { headers: Record<string, string> };
-    const contentRange = respHeaders["content-range"];
+    const normalized = Object.fromEntries(
+      Object.entries(response.headers as Record<string, unknown>).map(([k, v]) => [
+        k.toLowerCase(),
+        typeof v === 'string' ? v : Array.isArray(v) ? v.join(', ') : String(v ?? ''),
+      ]),
+    ) as Record<string, string>;
+    const contentRange = normalized["content-range"];
     const totalBytes = contentRange ? Number(contentRange.split("/")[1]) : undefined;
     const partial = response.status === 206 || Boolean(contentRange);
 

@@ -18,6 +18,7 @@ GitLab MCP server provides tools for working with GitLab projects, merge request
 - [Configuration for Claude Code CLI](#configuration-for-claude-code-cli)
 - [Configuration for VS Code Cline](#configuration-for-vs-code-cline)
 - [MCP Tools](#mcp-tools)
+ - [Response Format](#response-format)
 
 ## Features
 
@@ -214,7 +215,8 @@ To use this MCP server with [Claude Code CLI](https://github.com/anthropics/clau
       "env": {
         "GITLAB_URL": "https://gitlab.example.com",
         "GITLAB_TOKEN": "glpat-your-token-here",
-        "GITLAB_TIMEZONE": "Europe/Moscow"
+        "GITLAB_TIMEZONE": "Europe/Moscow",
+        "GITLAB_USE_STRUCTURED_CONTENT": "false"
       }
     }
   }
@@ -241,7 +243,8 @@ To use this MCP server with [Cline](https://github.com/cline/cline) extension in
       "env": {
         "GITLAB_URL": "https://gitlab.example.com",
         "GITLAB_TOKEN": "glpat-your-token-here",
-        "GITLAB_TIMEZONE": "Europe/Moscow"
+        "GITLAB_TIMEZONE": "Europe/Moscow",
+        "GITLAB_USE_STRUCTURED_CONTENT": "false"
       }
     }
   }
@@ -593,3 +596,13 @@ The Pipelines & Jobs tools provide comprehensive access to GitLab CI/CD pipeline
   }
 }
 ```
+## Response Format
+
+The server returns exactly one data node by default, controlled via `GITLAB_USE_STRUCTURED_CONTENT` (default: `"true"`).
+
+- When `true`: tools return only the MCP `structuredContent` node with full data, and include an empty `content: []` to satisfy MCP typing.
+- When `false`: tools return only the MCP `content` node (a single `text` item containing the JSON string), and omit `structuredContent`.
+
+Notes for clients:
+- Claude Code users may set `GITLAB_USE_STRUCTURED_CONTENT="false"` if the client expects data in the `content` field.
+- Cline users (VS Code) can also set the flag to `"false"` in the server configuration if needed.

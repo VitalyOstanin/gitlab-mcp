@@ -7,6 +7,12 @@ import { toolError, toolSuccess } from "../utils/tool-response.js";
 export const gitlabMergeRequestDiffArgs = {
   project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
   iid: z.number().int().min(1).describe("Merge request IID (internal ID)"),
+  briefOutput: z
+    .boolean()
+    .optional()
+    .describe(
+      "Return brief output (default: true). Prefer using filePath/includePaths to limit response size.",
+    ),
   filePath: z
     .string()
     .optional()
@@ -41,8 +47,10 @@ export async function gitlabMergeRequestDiffHandler(client: GitLabClient, rawInp
         perPage: input.perPage ?? 20,
       },
     });
-    // Always include full diff
-    const mapped = diffsResult.data.map((f) => mapMergeRequestDiffFile(f, { includeDiff: true }));
+    const brief = input.briefOutput ?? true;
+    const mapped = brief
+      ? diffsResult.data.map((f) => mapMergeRequestDiffFile(f, { includeDiff: false }))
+      : diffsResult.data.map((f) => mapMergeRequestDiffFile(f, { includeDiff: true }));
     const payload = {
       project: project.path_with_namespace,
       mergeRequestIid: input.iid,
@@ -58,7 +66,7 @@ export async function gitlabMergeRequestDiffHandler(client: GitLabClient, rawInp
     ];
     const result = toolSuccess({
       payload,
-      summary: `Fetched full diff for ${payload.files.length} files in MR !${input.iid}${payload.pagination.hasMore ? " (more available)" : ""}`,
+      summary: `${brief ? "Fetched" : "Fetched full diff for"} ${payload.files.length} files in MR !${input.iid}${payload.pagination.hasMore ? " (more available)" : ""}`,
       fallbackText: fallbackLines.join("\n"),
     });
 

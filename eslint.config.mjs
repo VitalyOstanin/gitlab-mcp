@@ -92,6 +92,8 @@ export default [
         functions: 'always-multiline',
       }],
       'prefer-de-morgan-law/prefer-de-morgan-law': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
     },
   },
 ];

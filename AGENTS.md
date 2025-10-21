@@ -294,3 +294,21 @@ this.gitlabMcpServer.registerTool(
 - When pagination is present, include `pagination.count` and `hasMore` flags. In brief mode, truncate preview lists sensibly (e.g., first 20 items) and indicate truncation.
 - Document `briefOutput` in every applicable tool schema with a clear default and behavior description.
 - For tables or repeated structures, prefer ID, title/name, status, and URL fields in brief mode, deferring verbose fields to full mode on demand.
+
+### Pre‑Release TOC Verification (Release Rule)
+- Before every release, verify that README TOCs are present and accurate:
+  - Files: `README.md` and `README-ru.md`.
+  - Ensure each TOC includes all `##` and `###` headings in the correct order and with proper anchors.
+- Suggested quick checks:
+  - Presence: `rg -n "^## Table of Contents" README.md README-ru.md`
+  - Compare headers vs TOC entries:
+    ```bash
+    for f in README.md README-ru.md; do
+      echo "== $f ==";
+      echo "Headers (H2/H3):";
+      rg -n "^(##|###) " "$f" | sed -E 's/^[^ ]+\s+//' | sed -E 's/^#+ //';
+      echo "TOC entries:";
+      rg -n "^- \\[[^\\]]+\\\\]\\(#[^)]+\\)" "$f" || true;
+    done
+    ```
+  - If mismatches are found, update the TOC blocks in the README files accordingly.

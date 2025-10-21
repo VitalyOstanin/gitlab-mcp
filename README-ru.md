@@ -90,17 +90,17 @@ node dist/index.js
 ```
 
 ## Конфигурация для Code (Рекомендуется)
-
-Чтобы использовать этот MCP сервер с [Code](https://github.com/just-every/code), добавьте следующую конфигурацию в `~/.code/config.toml`:
-
+Добавьте в `~/.code/config.toml`:
 ```toml
 [mcp_servers.gitlab-mcp]
 command = "npx"
 args = ["-y", "@vitalyostanin/gitlab-mcp@latest"]
-env = { "GITLAB_URL" = "https://gitlab.example.com", "GITLAB_TOKEN" = "glpat-your-token-here", "GITLAB_TIMEZONE" = "Europe/Moscow" }
-```
 
-**Примечание:** Эта конфигурация использует npx для запуска опубликованного пакета. Альтернативно, для локальной разработки используйте `command = "node"` с `args = ["/path/to/dist/index.js"]`.
+[mcp_servers.gitlab-mcp.env]
+GITLAB_URL = "https://gitlab.example.com"
+GITLAB_TOKEN = "glpat-your-token-here"
+GITLAB_TIMEZONE = "Europe/Moscow"
+```
 
 ## Конфигурация для Claude Code CLI
 

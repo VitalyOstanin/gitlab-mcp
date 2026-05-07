@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.5.1] - 2026-05-07
 - [0.5.0] - 2026-05-07
 - [0.4.0] - 2025-10-21
 - [0.3.0] - 2025-10-19
@@ -15,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.5.1] - 2026-05-07
+
+### Removed
+- `p-retry` dependency (was `^6.2.1`). The package was no longer referenced anywhere in source — the previous retry path lived inside `GitLabClient.request`, which now just returns `fn()` directly with the comment "No automatic retries: delegated to clients/AI assistant". Closes the dependabot PR for `p-retry` 6 → 8.
+- `GitLabClient.RETRY_CONFIG` static (`MAX_RETRIES`/`BACKOFF_FACTOR`/`MIN_TIMEOUT_MS`) — only ever read by the deleted retry code.
+- `GitLabClient.describeAxiosError` private method — never called after the retry rewrite.
 
 ## [0.5.0] - 2026-05-07
 

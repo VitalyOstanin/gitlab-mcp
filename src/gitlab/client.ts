@@ -424,12 +424,6 @@ export interface GitLabPipelineTestReportSummary {
 }
 
 export class GitLabClient {
-  private static readonly RETRY_CONFIG = {
-    MAX_RETRIES: 3,
-    BACKOFF_FACTOR: 2,
-    MIN_TIMEOUT_MS: 300,
-  } as const;
-
   private static readonly MERGE_REQUEST_FRESHNESS_THRESHOLD_HOURS = 24;
   private static readonly MS_PER_HOUR = 1000 * 60 * 60;
 
@@ -469,18 +463,6 @@ export class GitLabClient {
   private async request<T>(fn: () => Promise<T>): Promise<T> {
     // No automatic retries: delegated to clients/AI assistant
     return fn();
-  }
-
-  private describeAxiosError(error: AxiosError): string {
-    if (error.response) {
-      return `HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`;
-    }
-
-    if (error.request) {
-      return 'No response received';
-    }
-
-    return error.message;
   }
 
   private parseHeaderNumber(headers: Record<string, string>, headerName: string): number | undefined {

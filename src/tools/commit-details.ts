@@ -1,13 +1,13 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapCommit } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapCommit } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabCommitDetailsArgs = {
-  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
-  sha: z.string().min(7).describe("Commit SHA or short SHA"),
-  withStats: z.boolean().optional().describe("Include stats (additions/deletions/total) (default: false)"),
+  project: z.union([z.string(), z.number()]).describe('Project ID (number) or path (namespace/project)'),
+  sha: z.string().min(7).describe('Commit SHA or short SHA'),
+  withStats: z.boolean().optional().describe('Include stats (additions/deletions/total) (default: false)'),
 };
 
 export const gitlabCommitDetailsSchema = z.object(gitlabCommitDetailsArgs);

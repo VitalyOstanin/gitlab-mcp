@@ -1,13 +1,13 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapMergeRequest } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapMergeRequest } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabMergeRequestDetailsArgs = {
-  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
-  iid: z.number().int().min(1).describe("Merge request IID (internal ID)"),
-  forceRefresh: z.boolean().optional().describe("Force refresh cached data"),
+  project: z.union([z.string(), z.number()]).describe('Project ID (number) or path (namespace/project)'),
+  iid: z.number().int().min(1).describe('Merge request IID (internal ID)'),
+  forceRefresh: z.boolean().optional().describe('Force refresh cached data'),
 };
 
 export const gitlabMergeRequestDetailsSchema = z.object(gitlabMergeRequestDetailsArgs);

@@ -1,19 +1,20 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import preferDeMorganLaw from '@vitalyostanin/eslint-prefer-de-morgan-law';
+import gitignore from 'eslint-config-flat-gitignore';
 
 export default [
+  gitignore(),
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**']
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'temp/**', 'tmp/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.mts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        project: './tsconfig.eslint.json',
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
         sourceType: 'module',
       },
@@ -25,13 +26,9 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
-      'prefer-de-morgan-law': {
-        rules: {
-          'prefer-de-morgan-law': preferDeMorganLaw,
-        },
-      },
     },
     rules: {
+      'quotes': ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
       'eol-last': 'error',
       'no-trailing-spaces': 'error',
       'no-console': 'off',
@@ -47,15 +44,23 @@ export default [
         { blankLine: 'always', prev: ['const', 'let', 'var'], next: '*' },
         { blankLine: 'never', prev: ['const', 'let', 'var'], next: ['const', 'let', 'var'] },
       ],
-      'prefer-destructuring': ['error', {
-        VariableDeclarator: { array: false, object: true },
-        AssignmentExpression: { array: false, object: false }
-      }, { enforceForRenamedProperties: false }],
-      'object-shorthand': ['error', 'always', {
-        ignoreConstructors: false,
-        avoidQuotes: true,
-        avoidExplicitReturnArrows: true,
-      }],
+      'prefer-destructuring': [
+        'error',
+        {
+          VariableDeclarator: { array: false, object: true },
+          AssignmentExpression: { array: false, object: false },
+        },
+        { enforceForRenamedProperties: false },
+      ],
+      'object-shorthand': [
+        'error',
+        'always',
+        {
+          ignoreConstructors: false,
+          avoidQuotes: true,
+          avoidExplicitReturnArrows: true,
+        },
+      ],
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       'no-extra-boolean-cast': 'error',
@@ -80,20 +85,36 @@ export default [
       '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
       'prefer-object-spread': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-rest-params': 'error',
       'prefer-spread': 'error',
-      'comma-dangle': ['error', {
-        arrays: 'always-multiline',
-        objects: 'always-multiline',
-        imports: 'always-multiline',
-        exports: 'always-multiline',
-        functions: 'always-multiline',
-      }],
-      'prefer-de-morgan-law/prefer-de-morgan-law': 'error',
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/await-thenable': 'error',
+      'comma-dangle': [
+        'error',
+        {
+          arrays: 'always-multiline',
+          objects: 'always-multiline',
+          imports: 'always-multiline',
+          exports: 'always-multiline',
+          functions: 'always-multiline',
+        },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+  {
+    files: ['test/**/*.ts', 'test/**/*.mts', '**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false }],
     },
   },
 ];

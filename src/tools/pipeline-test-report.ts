@@ -1,12 +1,12 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabPipelineTestReportArgs = {
-  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
-  pipelineId: z.number().int().min(1).describe("Pipeline ID (not IID)"),
-  briefOutput: z.boolean().optional().describe("Return brief output (default: true). Only summary metrics in brief mode."),
+  project: z.union([z.string(), z.number()]).describe('Project ID (number) or path (namespace/project)'),
+  pipelineId: z.number().int().min(1).describe('Pipeline ID (not IID)'),
+  briefOutput: z.boolean().optional().describe('Return brief output (default: true). Only summary metrics in brief mode.'),
 };
 
 export const gitlabPipelineTestReportSchema = z.object(gitlabPipelineTestReportArgs);
@@ -40,7 +40,7 @@ export async function gitlabPipelineTestReportHandler(client: GitLabClient, rawI
     return toolSuccess({
       payload,
       summary: `Test report summary for pipeline #${input.pipelineId}: ${payload.summary.success}/${payload.summary.total} passed`,
-      fallbackText: lines.join("\n"),
+      fallbackText: lines.join('\n'),
     });
   } catch (error) {
     return toolError(error);

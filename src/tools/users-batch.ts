@@ -1,15 +1,15 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapUser } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapUser } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabUsersBatchArgs = {
   userIds: z
     .array(z.union([z.number(), z.string()]))
     .min(1)
     .max(50)
-    .describe("Array of user IDs (numbers) or usernames (strings), max 50 users"),
+    .describe('Array of user IDs (numbers) or usernames (strings), max 50 users'),
 };
 
 export const gitlabUsersBatchSchema = z.object(gitlabUsersBatchArgs);
@@ -37,13 +37,13 @@ export async function gitlabUsersBatchHandler(client: GitLabClient, rawInput: un
     }
 
     if (payload.notFound.length > 0) {
-      fallbackLines.push(`Not found: ${payload.notFound.join(", ")}`);
+      fallbackLines.push(`Not found: ${payload.notFound.join(', ')}`);
     }
 
     const successResult = toolSuccess({
       payload,
-      summary: `Found ${payload.found} out of ${payload.total} users${payload.notFound.length > 0 ? `, ${payload.notFound.length} not found` : ""}`,
-      fallbackText: fallbackLines.join("\n"),
+      summary: `Found ${payload.found} out of ${payload.total} users${payload.notFound.length > 0 ? `, ${payload.notFound.length} not found` : ''}`,
+      fallbackText: fallbackLines.join('\n'),
     });
 
     return successResult;

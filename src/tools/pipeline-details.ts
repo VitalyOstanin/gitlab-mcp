@@ -1,12 +1,12 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapPipeline } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapPipeline } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabPipelineDetailsArgs = {
-  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
-  pipelineId: z.number().int().min(1).describe("Pipeline ID (not IID)"),
+  project: z.union([z.string(), z.number()]).describe('Project ID (number) or path (namespace/project)'),
+  pipelineId: z.number().int().min(1).describe('Pipeline ID (not IID)'),
 };
 
 export const gitlabPipelineDetailsSchema = z.object(gitlabPipelineDetailsArgs);
@@ -41,7 +41,7 @@ export async function gitlabPipelineDetailsHandler(client: GitLabClient, rawInpu
     const successResult = toolSuccess({
       payload,
       summary: `Pipeline #${pipeline.id} for ${project.path_with_namespace}: ${pipeline.status} (${pipeline.ref})`,
-      fallbackText: fallbackLines.join("\n"),
+      fallbackText: fallbackLines.join('\n'),
     });
 
     return successResult;

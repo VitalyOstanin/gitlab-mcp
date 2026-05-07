@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapUser } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapUser } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabUserDetailsArgs = {
-  userId: z.union([z.number(), z.string()]).describe("User ID (number) or username (string). Numeric ID provides faster lookup via direct API call, username requires search query."),
+  userId: z.union([z.number(), z.string()]).describe('User ID (number) or username (string). Numeric ID provides faster lookup via direct API call, username requires search query.'),
 };
 
 export const gitlabUserDetailsSchema = z.object(gitlabUserDetailsArgs);
@@ -23,7 +23,7 @@ export async function gitlabUserDetailsHandler(client: GitLabClient, rawInput: u
         user: mapped,
       },
       summary: `User ${mapped.username} (${mapped.name})`,
-      fallbackText: `User ${mapped.username} — ${mapped.name} (${mapped.state})${mapped.lastActivityOn ? ` — last active: ${mapped.lastActivityOn}` : ""}${mapped.webUrl ? ` → ${mapped.webUrl}` : ""}`,
+      fallbackText: `User ${mapped.username} — ${mapped.name} (${mapped.state})${mapped.lastActivityOn ? ` — last active: ${mapped.lastActivityOn}` : ''}${mapped.webUrl ? ` → ${mapped.webUrl}` : ''}`,
     });
 
     return successResult;

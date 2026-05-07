@@ -1,38 +1,38 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapPipeline } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapPipeline } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabPipelinesArgs = {
-  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
+  project: z.union([z.string(), z.number()]).describe('Project ID (number) or path (namespace/project)'),
   ref: z.string().optional().describe("Filter by branch/tag name (e.g., 'master', 'develop')"),
-  sha: z.string().optional().describe("Filter by commit SHA"),
+  sha: z.string().optional().describe('Filter by commit SHA'),
   status: z
     .enum([
-      "created",
-      "waiting_for_resource",
-      "preparing",
-      "pending",
-      "running",
-      "success",
-      "failed",
-      "canceled",
-      "skipped",
-      "manual",
-      "scheduled",
+      'created',
+      'waiting_for_resource',
+      'preparing',
+      'pending',
+      'running',
+      'success',
+      'failed',
+      'canceled',
+      'skipped',
+      'manual',
+      'scheduled',
     ])
     .optional()
     .describe("Filter by pipeline status (e.g., 'success', 'failed', 'running')"),
-  orderBy: z.enum(["id", "status", "ref", "updated_at", "user_id"]).optional().describe("Sort pipelines by field (default: id)"),
-  sort: z.enum(["asc", "desc"]).optional().describe("Sort direction (default: desc)"),
+  orderBy: z.enum(['id', 'status', 'ref', 'updated_at', 'user_id']).optional().describe('Sort pipelines by field (default: id)'),
+  sort: z.enum(['asc', 'desc']).optional().describe('Sort direction (default: desc)'),
   scope: z.string().optional().describe("Filter by scope (e.g., 'finished', 'running')"),
-  updatedAfter: z.string().datetime().optional().describe("Return pipelines updated after this date (ISO 8601 format)"),
-  updatedBefore: z.string().datetime().optional().describe("Return pipelines updated before this date (ISO 8601 format)"),
-  createdAfter: z.string().datetime().optional().describe("Return pipelines created after this date (ISO 8601 format)"),
-  createdBefore: z.string().datetime().optional().describe("Return pipelines created before this date (ISO 8601 format)"),
-  page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
-  perPage: z.number().int().min(1).max(100).optional().describe("Number of pipelines per page (default: 50, max: 100)"),
+  updatedAfter: z.string().datetime().optional().describe('Return pipelines updated after this date (ISO 8601 format)'),
+  updatedBefore: z.string().datetime().optional().describe('Return pipelines updated before this date (ISO 8601 format)'),
+  createdAfter: z.string().datetime().optional().describe('Return pipelines created after this date (ISO 8601 format)'),
+  createdBefore: z.string().datetime().optional().describe('Return pipelines created before this date (ISO 8601 format)'),
+  page: z.number().int().min(1).optional().describe('Page number for pagination (default: 1)'),
+  perPage: z.number().int().min(1).max(100).optional().describe('Number of pipelines per page (default: 50, max: 100)'),
 };
 
 export const gitlabPipelinesSchema = z.object(gitlabPipelinesArgs);
@@ -47,8 +47,8 @@ export async function gitlabPipelinesHandler(client: GitLabClient, rawInput: unk
         ref: input.ref,
         sha: input.sha,
         status: input.status,
-        orderBy: input.orderBy ?? "id",
-        sort: input.sort ?? "desc",
+        orderBy: input.orderBy ?? 'id',
+        sort: input.sort ?? 'desc',
         scope: input.scope,
         updatedAfter: input.updatedAfter,
         updatedBefore: input.updatedBefore,
@@ -75,8 +75,8 @@ export async function gitlabPipelinesHandler(client: GitLabClient, rawInput: unk
     ];
     const successResult = toolSuccess({
       payload,
-      summary: `Fetched ${payload.pipelines.length} pipelines for ${project.path_with_namespace}${payload.pagination.hasMore ? " (more available)" : ""}`,
-      fallbackText: fallbackLines.join("\n"),
+      summary: `Fetched ${payload.pipelines.length} pipelines for ${project.path_with_namespace}${payload.pagination.hasMore ? ' (more available)' : ''}`,
+      fallbackText: fallbackLines.join('\n'),
     });
 
     return successResult;

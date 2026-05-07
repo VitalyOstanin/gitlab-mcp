@@ -1,17 +1,17 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapJob } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapJob } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabProjectJobsArgs = {
-  project: z.union([z.string(), z.number()]).describe("Project ID (number) or path (namespace/project)"),
+  project: z.union([z.string(), z.number()]).describe('Project ID (number) or path (namespace/project)'),
   scope: z
-    .array(z.enum(["created", "pending", "running", "failed", "success", "canceled", "skipped", "manual"]))
+    .array(z.enum(['created', 'pending', 'running', 'failed', 'success', 'canceled', 'skipped', 'manual']))
     .optional()
     .describe("Filter jobs by status (e.g., ['failed', 'running'])"),
-  page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
-  perPage: z.number().int().min(1).max(100).optional().describe("Number of jobs per page (default: 50, max: 100)"),
+  page: z.number().int().min(1).optional().describe('Page number for pagination (default: 1)'),
+  perPage: z.number().int().min(1).max(100).optional().describe('Number of jobs per page (default: 50, max: 100)'),
 };
 
 export const gitlabProjectJobsSchema = z.object(gitlabProjectJobsArgs);
@@ -43,8 +43,8 @@ export async function gitlabProjectJobsHandler(client: GitLabClient, rawInput: u
     ];
     const successResult = toolSuccess({
       payload,
-      summary: `Fetched ${payload.jobs.length} jobs for ${project.path_with_namespace}${payload.pagination.hasMore ? " (more available)" : ""}`,
-      fallbackText: fallbackLines.join("\n"),
+      summary: `Fetched ${payload.jobs.length} jobs for ${project.path_with_namespace}${payload.pagination.hasMore ? ' (more available)' : ''}`,
+      fallbackText: fallbackLines.join('\n'),
     });
 
     return successResult;

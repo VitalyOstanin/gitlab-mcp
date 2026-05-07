@@ -1,17 +1,17 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapUser } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapUser } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabUsersArgs = {
-  search: z.string().optional().describe("Search by name, username or email"),
-  username: z.string().optional().describe("Exact match by username"),
-  active: z.boolean().optional().describe("Only active/inactive users"),
-  blocked: z.boolean().optional().describe("Only blocked/unblocked users"),
-  external: z.boolean().optional().describe("Only external/internal users"),
-  page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
-  perPage: z.number().int().min(1).max(100).optional().describe("Number of users per page (default: 50, max: 100)"),
+  search: z.string().optional().describe('Search by name, username or email'),
+  username: z.string().optional().describe('Exact match by username'),
+  active: z.boolean().optional().describe('Only active/inactive users'),
+  blocked: z.boolean().optional().describe('Only blocked/unblocked users'),
+  external: z.boolean().optional().describe('Only external/internal users'),
+  page: z.number().int().min(1).optional().describe('Page number for pagination (default: 1)'),
+  perPage: z.number().int().min(1).max(100).optional().describe('Number of users per page (default: 50, max: 100)'),
 };
 
 export const gitlabUsersSchema = z.object(gitlabUsersArgs).optional();
@@ -44,12 +44,12 @@ export async function gitlabUsersHandler(client: GitLabClient, rawInput?: unknow
     } as const;
     const fallbackLines = [
       `Users page ${payload.pagination.page} (per page ${payload.pagination.perPage}, fetched ${payload.pagination.count}):`,
-      ...payload.users.map((user) => `${user.username} — ${user.name} (${user.state})${user.lastActivityOn ? ` — last active: ${user.lastActivityOn}` : ""}`),
+      ...payload.users.map((user) => `${user.username} — ${user.name} (${user.state})${user.lastActivityOn ? ` — last active: ${user.lastActivityOn}` : ''}`),
     ];
     const successResult = toolSuccess({
       payload,
-      summary: `Fetched ${payload.users.length} users${payload.pagination.hasMore ? " (more available)" : ""}`,
-      fallbackText: fallbackLines.join("\n"),
+      summary: `Fetched ${payload.users.length} users${payload.pagination.hasMore ? ' (more available)' : ''}`,
+      fallbackText: fallbackLines.join('\n'),
     });
 
     return successResult;

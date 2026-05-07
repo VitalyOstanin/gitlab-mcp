@@ -1,18 +1,18 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapProject } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapProject } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabProjectsArgs = {
-  search: z.string().optional().describe("Filter projects by name, path, or description (optional, for basic filtering)"),
-  membership: z.boolean().optional().describe("Show only projects where current user is a member (optional)"),
+  search: z.string().optional().describe('Filter projects by name, path, or description (optional, for basic filtering)'),
+  membership: z.boolean().optional().describe('Show only projects where current user is a member (optional)'),
   archived: z
     .boolean()
     .optional()
-    .describe("Filter by archive status: true = only archived projects, false = only active projects, omit = all projects (optional)"),
-  page: z.number().int().min(1).optional().describe("Page number for pagination (default: 1)"),
-  perPage: z.number().int().min(1).max(100).optional().describe("Number of projects per page (default: 50, max: 100)"),
+    .describe('Filter by archive status: true = only archived projects, false = only active projects, omit = all projects (optional)'),
+  page: z.number().int().min(1).optional().describe('Page number for pagination (default: 1)'),
+  perPage: z.number().int().min(1).max(100).optional().describe('Number of projects per page (default: 50, max: 100)'),
 };
 
 export const gitlabProjectsSchema = z.object(gitlabProjectsArgs).optional();
@@ -44,13 +44,13 @@ export async function gitlabProjectsHandler(client: GitLabClient, rawInput?: unk
     const fallbackLines = [
       `Projects page ${payload.pagination.page} (per page ${payload.pagination.perPage}, fetched ${payload.pagination.count}):`,
       ...payload.projects.map((project) =>
-        `${project.pathWithNamespace} — ${project.name}${project.webUrl ? ` (${project.webUrl})` : ""}`,
+        `${project.pathWithNamespace} — ${project.name}${project.webUrl ? ` (${project.webUrl})` : ''}`,
       ),
     ];
     const successResult = toolSuccess({
       payload,
-      summary: `Fetched ${payload.projects.length} projects${payload.pagination.hasMore ? " (more available)" : ""}`,
-      fallbackText: fallbackLines.join("\n"),
+      summary: `Fetched ${payload.projects.length} projects${payload.pagination.hasMore ? ' (more available)' : ''}`,
+      fallbackText: fallbackLines.join('\n'),
     });
 
     return successResult;

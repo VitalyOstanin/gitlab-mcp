@@ -1,19 +1,18 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
+    "outDir": "dist",
     "rootDir": "."
   },
   "include": [
     "src/**/*",
-    "test/**/*",
-    "index.ts",
-    "eslint.config.mjs",
-    "vitest.config.ts"
+    "index.ts"
   ],
   "exclude": [
     "dist",
     "node_modules",
-    "coverage"
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "test/**/*"
   ]
 }

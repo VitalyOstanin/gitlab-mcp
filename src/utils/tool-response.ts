@@ -1,5 +1,5 @@
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { ZodError } from "zod";
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { ZodError } from 'zod';
 
 let defaultUseStructuredContent = true;
 
@@ -17,14 +17,14 @@ export function toolSuccess<T>(payload: T, useStructuredContent: boolean = defau
   if (useStructuredContent) {
     return {
       content: [],
-      structuredContent: base as unknown as Record<string, unknown>,
-    } as CallToolResult;
+      structuredContent: base,
+    };
   }
 
   return {
     content: [
       {
-        type: "text",
+        type: 'text',
         text: JSON.stringify(base),
       },
     ],
@@ -34,22 +34,22 @@ export function toolSuccess<T>(payload: T, useStructuredContent: boolean = defau
 export function toolError(error: unknown, useStructuredContent: boolean = defaultUseStructuredContent): CallToolResult {
   if (error instanceof ZodError) {
     const errObj = {
-      name: "ValidationError",
-      message: "Invalid input",
+      name: 'ValidationError',
+      message: 'Invalid input',
       details: error.flatten(),
     } as const;
 
     return useStructuredContent
-      ? ({ isError: true, content: [], structuredContent: errObj as unknown as Record<string, unknown> } as CallToolResult)
+      ? ({ isError: true, content: [], structuredContent: errObj })
       : ({
           isError: true,
           content: [
             {
-              type: "text",
+              type: 'text',
               text: JSON.stringify(errObj),
             },
           ],
-        } as CallToolResult);
+        });
   }
 
   if (error instanceof Error) {
@@ -59,27 +59,27 @@ export function toolError(error: unknown, useStructuredContent: boolean = defaul
     } as const;
 
     return useStructuredContent
-      ? ({ isError: true, content: [], structuredContent: errObj as unknown as Record<string, unknown> } as CallToolResult)
+      ? ({ isError: true, content: [], structuredContent: errObj })
       : ({
           isError: true,
           content: [
-            { type: "text", text: JSON.stringify(errObj) },
+            { type: 'text', text: JSON.stringify(errObj) },
           ],
-        } as CallToolResult);
+        });
   }
 
   const errObj = {
-    name: "UnknownError",
-    message: "An unknown error occurred",
+    name: 'UnknownError',
+    message: 'An unknown error occurred',
     details: error,
   } as const;
 
   return useStructuredContent
-    ? ({ isError: true, content: [], structuredContent: errObj as unknown as Record<string, unknown> } as CallToolResult)
+    ? ({ isError: true, content: [], structuredContent: errObj })
     : ({
         isError: true,
         content: [
-          { type: "text", text: JSON.stringify(errObj) },
+          { type: 'text', text: JSON.stringify(errObj) },
         ],
-      } as CallToolResult);
+      });
 }

@@ -1,6 +1,6 @@
-import { DateTime, Settings } from "luxon";
+import { DateTime, Settings } from 'luxon';
 
-let currentTimezone = "Europe/Moscow";
+let currentTimezone = 'Europe/Moscow';
 
 export function initializeTimezone(timezone: string): void {
   currentTimezone = timezone;
@@ -16,9 +16,9 @@ export function parseDateInput(value: string | number | Date): number {
     return DateTime.fromJSDate(value).toMillis();
   }
 
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     if (!Number.isFinite(value)) {
-      throw new Error("Date value must be a finite number");
+      throw new Error('Date value must be a finite number');
     }
 
     return value;
@@ -36,21 +36,21 @@ export function parseDateInput(value: string | number | Date): number {
 export function toIsoDateString(value: string | number | Date): string {
   const timestamp = parseDateInput(value);
 
-  return DateTime.fromMillis(timestamp).toFormat("yyyy-MM-dd");
+  return DateTime.fromMillis(timestamp).toFormat('yyyy-MM-dd');
 }
 
 export function enumerateDateRange(start: string | number | Date, end: string | number | Date): string[] {
-  const startTime = DateTime.fromMillis(parseDateInput(start)).startOf("day");
-  const endTime = DateTime.fromMillis(parseDateInput(end)).startOf("day");
+  const startTime = DateTime.fromMillis(parseDateInput(start)).startOf('day');
+  const endTime = DateTime.fromMillis(parseDateInput(end)).startOf('day');
 
   if (endTime < startTime) {
-    throw new Error("End date cannot be earlier than start date");
+    throw new Error('End date cannot be earlier than start date');
   }
 
   const dates: string[] = [];
 
   for (let current = startTime; current <= endTime; current = current.plus({ days: 1 })) {
-    dates.push(current.toFormat("yyyy-MM-dd"));
+    dates.push(current.toFormat('yyyy-MM-dd'));
   }
 
   return dates;
@@ -91,8 +91,8 @@ export function filterWorkingDays(
 
 export function getDayBounds(value: string | number | Date): { start: number; end: number } {
   const date = DateTime.fromMillis(parseDateInput(value));
-  const start = date.startOf("day");
-  const end = date.endOf("day");
+  const start = date.startOf('day');
+  const end = date.endOf('day');
 
   return { start: start.toMillis(), end: end.toMillis() };
 }
@@ -128,7 +128,7 @@ export function validateDateRange(start: string | number | Date, end: string | n
   const endTime = DateTime.fromMillis(parseDateInput(end));
 
   if (endTime < startTime) {
-    throw new Error("Start date must be before or equal to end date");
+    throw new Error('Start date must be before or equal to end date');
   }
 }
 
@@ -156,17 +156,17 @@ export function formatDate(value: string | number | Date): string {
 
 export function formatDateInTimezone(value: string | number | Date, timezone: string): string {
   const timestamp = parseDateInput(value);
-  const formatted = DateTime.fromMillis(timestamp).setZone(timezone).toFormat("yyyy-MM-dd");
+  const formatted = DateTime.fromMillis(timestamp).setZone(timezone).toFormat('yyyy-MM-dd');
 
   return formatted;
 }
 
 export function generateDateRange(start: string | number | Date, end: string | number | Date): Date[] {
-  const startDate = DateTime.fromMillis(parseDateInput(start)).startOf("day");
-  const endDate = DateTime.fromMillis(parseDateInput(end)).startOf("day");
+  const startDate = DateTime.fromMillis(parseDateInput(start)).startOf('day');
+  const endDate = DateTime.fromMillis(parseDateInput(end)).startOf('day');
 
   if (endDate < startDate) {
-    throw new Error("End date cannot be earlier than start date");
+    throw new Error('End date cannot be earlier than start date');
   }
 
   const dates: Date[] = [];

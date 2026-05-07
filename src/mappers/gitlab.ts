@@ -1,6 +1,6 @@
-import { DateTime } from "luxon";
-import type { GitLabMergeRequest, GitLabProject, GitLabProjectTag, GitLabUser, GitLabMember, GitLabPipeline, GitLabJob, GitLabMergeRequestDiffFile, GitLabCommit, GitLabCommitStatus } from "../gitlab/client.js";
-import { getTimezone } from "../utils/date.js";
+import { DateTime } from 'luxon';
+import type { GitLabMergeRequest, GitLabProject, GitLabProjectTag, GitLabUser, GitLabMember, GitLabPipeline, GitLabJob, GitLabMergeRequestDiffFile, GitLabCommit, GitLabCommitStatus } from '../gitlab/client.js';
+import { getTimezone } from '../utils/date.js';
 
 /**
  * Map basic user info to internal representation
@@ -44,17 +44,17 @@ function formatDatetime(isoString: string | undefined | null): string | undefine
   }
 
   const timezone = getTimezone();
-  const formatted = DateTime.fromISO(isoString).toFormat("yyyy-MM-dd HH:mm:ss");
+  const formatted = DateTime.fromISO(isoString).toFormat('yyyy-MM-dd HH:mm:ss');
 
   return `${formatted} (${timezone})`;
 }
 
 const ACCESS_LEVEL_DESCRIPTIONS: Record<number, string> = {
-  10: "Guest",
-  20: "Reporter",
-  30: "Developer",
-  40: "Maintainer",
-  50: "Owner",
+  10: 'Guest',
+  20: 'Reporter',
+  30: 'Developer',
+  40: 'Maintainer',
+  50: 'Owner',
 } as const;
 
 export interface MappedProject {
@@ -73,7 +73,7 @@ export interface MappedUser {
   username: string;
   name: string;
   email?: string;
-  state: "active" | "blocked";
+  state: 'active' | 'blocked';
   avatarUrl?: string;
   webUrl?: string;
   createdAt: string;
@@ -96,7 +96,7 @@ export interface MappedMember {
   username: string;
   name: string;
   email?: string;
-  state: "active" | "blocked";
+  state: 'active' | 'blocked';
   avatarUrl?: string;
   webUrl?: string;
   accessLevel: number;
@@ -118,14 +118,14 @@ export interface MappedMergeRequest {
   id: number;
   iid: number;
   title: string;
-  state: GitLabMergeRequest["state"];
+  state: GitLabMergeRequest['state'];
   createdAt: string;
   updatedAt: string;
   mergedAt?: string | null;
   sourceBranch: string;
   targetBranch: string;
-  author?: GitLabMergeRequest["author"];
-  assignee?: GitLabMergeRequest["assignee"] | null;
+  author?: GitLabMergeRequest['author'];
+  assignee?: GitLabMergeRequest['assignee'] | null;
   description?: string | null;
   webUrl?: string;
   fresh?: boolean;
@@ -134,7 +134,7 @@ export interface MappedMergeRequest {
 export interface MappedPipeline {
   id: number;
   iid: number;
-  status: GitLabPipeline["status"];
+  status: GitLabPipeline['status'];
   source: string;
   ref: string;
   sha: string;
@@ -157,7 +157,7 @@ export interface MappedJob {
   id: number;
   name: string;
   stage: string;
-  status: GitLabJob["status"];
+  status: GitLabJob['status'];
   ref: string;
   tag: boolean;
   coverage?: string;
@@ -365,7 +365,7 @@ export function mapMember(member: GitLabMember, options: { webUrl?: string } = {
     avatarUrl: member.avatar_url,
     webUrl: options.webUrl ?? member.web_url,
     accessLevel: member.access_level,
-    accessLevelDescription: ACCESS_LEVEL_DESCRIPTIONS[member.access_level] ?? "Unknown",
+    accessLevelDescription: ACCESS_LEVEL_DESCRIPTIONS[member.access_level] ?? 'Unknown',
     expiresAt: formatDatetime(member.expires_at) ?? member.expires_at,
   };
 

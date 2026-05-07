@@ -1,16 +1,16 @@
-import axios, { type AxiosError, type AxiosInstance } from "axios";
-import semver from "semver";
-import { z } from "zod";
-import { MutexPool } from "@vitalyostanin/mutex-pool";
+import axios, { type AxiosError, type AxiosInstance } from 'axios';
+import semver from 'semver';
+import { z } from 'zod';
+import { MutexPool } from '@vitalyostanin/mutex-pool';
 
-import { loadConfig, type Config } from "../config/index.js";
+import { loadConfig, type Config } from '../config/index.js';
 
 const paginationSchema = z.object({
   perPage: z.number().int().min(1).max(100).default(50),
   page: z.number().int().min(1).default(1),
 });
 const mergeRequestFilterSchema = z.object({
-  state: z.enum(["opened", "closed", "merged", "all"]).default("all"),
+  state: z.enum(['opened', 'closed', 'merged', 'all']).default('all'),
   updatedAfter: z.string().datetime().optional(),
   updatedBefore: z.string().datetime().optional(),
   targetBranch: z.string().optional(),
@@ -63,7 +63,7 @@ export interface GitLabMergeRequest {
   iid: number;
   title: string;
   description: string | null;
-  state: "opened" | "closed" | "merged" | "locked";
+  state: 'opened' | 'closed' | 'merged' | 'locked';
   created_at: string;
   updated_at: string;
   merged_at: string | null;
@@ -108,7 +108,7 @@ export interface GitLabUser {
   username: string;
   name: string;
   email?: string;
-  state: "active" | "blocked";
+  state: 'active' | 'blocked';
   avatar_url?: string;
   web_url: string;
   created_at: string;
@@ -142,7 +142,7 @@ export interface GitLabMember {
   username: string;
   name: string;
   email?: string;
-  state: "active" | "blocked";
+  state: 'active' | 'blocked';
   avatar_url?: string;
   web_url: string;
   access_level: number;
@@ -155,8 +155,8 @@ export interface GitLabProjectFilter extends GitLabPagination {
   simple?: boolean;
   search?: string;
   archived?: boolean;
-  orderBy?: "created_at" | "updated_at" | "last_activity_at";
-  sort?: "asc" | "desc";
+  orderBy?: 'created_at' | 'updated_at' | 'last_activity_at';
+  sort?: 'asc' | 'desc';
 }
 
 export interface GitLabUserFilter extends GitLabPagination {
@@ -194,7 +194,7 @@ interface GetMergeRequestDiffsOptions {
 interface SearchMergeRequestsOptions {
   projectId?: number;
   query: string;
-  state?: "opened" | "closed" | "merged" | "all";
+  state?: 'opened' | 'closed' | 'merged' | 'all';
   targetBranch?: string;
   pagination?: GitLabPagination;
 }
@@ -221,12 +221,12 @@ interface CreateTagOptions {
 
 export interface GitLabPipelineFilter extends GitLabPagination {
   ref?: string;
-  status?: GitLabPipeline["status"];
+  status?: GitLabPipeline['status'];
   source?: string;
   sha?: string;
   scope?: string;
-  orderBy?: "id" | "status" | "ref" | "updated_at" | "user_id";
-  sort?: "asc" | "desc";
+  orderBy?: 'id' | 'status' | 'ref' | 'updated_at' | 'user_id';
+  sort?: 'asc' | 'desc';
   updatedAfter?: string;
   updatedBefore?: string;
   username?: string;
@@ -236,8 +236,8 @@ export interface GitLabPipelineFilter extends GitLabPagination {
 }
 
 export interface GitLabJobFilter extends GitLabPagination {
-  scope?: Array<"created" | "pending" | "running" | "failed" | "success" |
-                 "canceled" | "skipped" | "manual">;
+  scope?: Array<'created' | 'pending' | 'running' | 'failed' | 'success' |
+                 'canceled' | 'skipped' | 'manual'>;
 }
 
 interface GetPipelinesOptions {
@@ -247,12 +247,12 @@ interface GetPipelinesOptions {
 
 interface GetPipelineJobsOptions {
   includeRetried?: boolean;
-  scope?: GitLabJobFilter["scope"];
+  scope?: GitLabJobFilter['scope'];
   pagination?: GitLabPagination;
 }
 
 interface GetProjectJobsOptions {
-  scope?: GitLabJobFilter["scope"];
+  scope?: GitLabJobFilter['scope'];
   pagination?: GitLabPagination;
 }
 
@@ -275,9 +275,9 @@ export interface GitLabPipeline {
   id: number;
   iid: number;
   project_id: number;
-  status: "created" | "waiting_for_resource" | "preparing" | "pending" |
-          "running" | "success" | "failed" | "canceled" | "skipped" |
-          "manual" | "scheduled";
+  status: 'created' | 'waiting_for_resource' | 'preparing' | 'pending' |
+          'running' | 'success' | 'failed' | 'canceled' | 'skipped' |
+          'manual' | 'scheduled';
   source: string;
   ref: string;
   sha: string;
@@ -307,8 +307,8 @@ export interface GitLabJob {
   id: number;
   name: string;
   stage: string;
-  status: "created" | "waiting_for_resource" | "preparing" | "pending" | "running" | "success" | "failed" |
-          "canceling" | "canceled" | "skipped" | "manual" | "scheduled";
+  status: 'created' | 'waiting_for_resource' | 'preparing' | 'pending' | 'running' | 'success' | 'failed' |
+          'canceling' | 'canceled' | 'skipped' | 'manual' | 'scheduled';
   ref: string;
   tag: boolean;
   coverage?: string;
@@ -449,14 +449,14 @@ export class GitLabClient {
   private normalizeHeaders(headers: unknown): Record<string, string> {
     const out: Record<string, string> = {};
 
-    if (headers && typeof headers === "object") {
+    if (headers && typeof headers === 'object') {
       for (const [key, value] of Object.entries(headers as Record<string, unknown>)) {
         const k = key.toLowerCase();
 
-        if (typeof value === "string") {
+        if (typeof value === 'string') {
           out[k] = value;
         } else if (Array.isArray(value)) {
-          out[k] = value.join(", ");
+          out[k] = value.join(', ');
         } else if (value != null) {
           out[k] = String(value);
         }
@@ -477,7 +477,7 @@ export class GitLabClient {
     }
 
     if (error.request) {
-      return "No response received";
+      return 'No response received';
     }
 
     return error.message;
@@ -488,10 +488,10 @@ export class GitLabClient {
   }
 
   private extractPaginationInfo(headers: Record<string, string>, page: number, perPage: number): PaginationInfo {
-    const total = this.parseHeaderNumber(headers, "x-total");
-    const totalPages = this.parseHeaderNumber(headers, "x-total-pages");
-    const nextPage = this.parseHeaderNumber(headers, "x-next-page");
-    const prevPage = this.parseHeaderNumber(headers, "x-prev-page");
+    const total = this.parseHeaderNumber(headers, 'x-total');
+    const totalPages = this.parseHeaderNumber(headers, 'x-total-pages');
+    const nextPage = this.parseHeaderNumber(headers, 'x-next-page');
+    const prevPage = this.parseHeaderNumber(headers, 'x-prev-page');
     const paginationInfo = {
       page,
       perPage,
@@ -526,14 +526,14 @@ export class GitLabClient {
       membership: options.membership ?? this.config.filters.includeMembershipOnly,
       simple: options.simple ?? true,
       archived: options.archived,
-      order_by: options.orderBy ?? "last_activity_at",
-      sort: options.sort ?? "desc",
+      order_by: options.orderBy ?? 'last_activity_at',
+      sort: options.sort ?? 'desc',
       per_page: pagination.perPage,
       page: pagination.page,
       search: options.search,
     } satisfies Record<string, unknown>;
     const response = await this.request(() =>
-      this.axios.get<GitLabProject[]>("/api/v4/projects", {
+      this.axios.get<GitLabProject[]>('/api/v4/projects', {
         params: filters,
       }),
     );
@@ -548,7 +548,7 @@ export class GitLabClient {
   }
 
   async getProject(identifier: number | string): Promise<GitLabProject> {
-    const projectId = typeof identifier === "number" ? identifier : encodeURIComponent(identifier);
+    const projectId = typeof identifier === 'number' ? identifier : encodeURIComponent(identifier);
     const response = await this.request(() => this.axios.get<GitLabProject>(`/api/v4/projects/${projectId}`));
     const project = response.data;
 
@@ -562,8 +562,8 @@ export class GitLabClient {
         params: {
           per_page: parsed.perPage,
           page: parsed.page,
-          order_by: "version",
-          sort: "desc",
+          order_by: 'version',
+          sort: 'desc',
         },
       }),
     );
@@ -577,13 +577,13 @@ export class GitLabClient {
 
   async createTag(projectId: number | string, options: CreateTagOptions): Promise<GitLabTag> {
     // Validate tag name follows SemVer
-    const cleanTagName = options.tagName.startsWith("v") ? options.tagName.slice(1) : options.tagName;
+    const cleanTagName = options.tagName.startsWith('v') ? options.tagName.slice(1) : options.tagName;
 
     if (!semver.valid(cleanTagName)) {
       throw new Error(`Invalid tag name: ${options.tagName}. Must follow SemVer format (e.g., v1.2.3 or 1.2.3)`);
     }
 
-    const projectIdEncoded = typeof projectId === "number" ? projectId : encodeURIComponent(projectId);
+    const projectIdEncoded = typeof projectId === 'number' ? projectId : encodeURIComponent(projectId);
     const requestBody = {
       tag_name: options.tagName,
       ref: options.ref,
@@ -601,15 +601,15 @@ export class GitLabClient {
         const { data } = error.response;
 
         if (status === 400) {
-          const details = data && typeof data === "object" ? JSON.stringify(data) : String(data);
+          const details = data && typeof data === 'object' ? JSON.stringify(data) : String(data);
 
-          throw new Error(`Bad request: Invalid tag parameters. ${details}`);
+          throw new Error(`Bad request: Invalid tag parameters. ${details}`, { cause: error });
         } else if (status === 403) {
-          throw new Error(`Forbidden: Insufficient permissions to create tag '${options.tagName}' in project ${projectIdEncoded}. Requires at least Developer role.`);
+          throw new Error(`Forbidden: Insufficient permissions to create tag '${options.tagName}' in project ${projectIdEncoded}. Requires at least Developer role.`, { cause: error });
         } else if (status === 409) {
-          throw new Error(`Conflict: Tag '${options.tagName}' already exists in project ${projectIdEncoded}.`);
+          throw new Error(`Conflict: Tag '${options.tagName}' already exists in project ${projectIdEncoded}.`, { cause: error });
         } else if (status === 422) {
-          throw new Error(`Unprocessable: Reference '${options.ref}' not found in repository for project ${projectIdEncoded}.`);
+          throw new Error(`Unprocessable: Reference '${options.ref}' not found in repository for project ${projectIdEncoded}.`, { cause: error });
         }
       }
 
@@ -629,7 +629,7 @@ export class GitLabClient {
           target_branch: filters.targetBranch,
           per_page: pagination.perPage,
           page: pagination.page,
-          order_by: "updated_at",
+          order_by: 'updated_at',
         },
       }),
     );
@@ -773,7 +773,7 @@ export class GitLabClient {
   async searchMergeRequests(options: SearchMergeRequestsOptions): Promise<PaginatedResponse<GitLabMergeRequest[]>> {
     const pagination = paginationSchema.parse(options.pagination ?? {});
     const params: Record<string, unknown> = {
-      scope: "merge_requests",
+      scope: 'merge_requests',
       search: options.query,
       per_page: pagination.perPage,
       page: pagination.page,
@@ -783,7 +783,7 @@ export class GitLabClient {
       params.project_id = options.projectId;
     }
 
-    if (options.state && options.state !== "all") {
+    if (options.state && options.state !== 'all') {
       params.state = options.state;
     }
 
@@ -792,7 +792,7 @@ export class GitLabClient {
     }
 
     const response = await this.request(() =>
-      this.axios.get<GitLabMergeRequest[]>("/api/v4/search", {
+      this.axios.get<GitLabMergeRequest[]>('/api/v4/search', {
         params,
       }),
     );
@@ -807,13 +807,13 @@ export class GitLabClient {
   async searchProjects(options: SearchProjectsOptions): Promise<PaginatedResponse<GitLabProject[]>> {
     const pagination = paginationSchema.parse(options.pagination ?? {});
     const params: Record<string, unknown> = {
-      scope: "projects",
+      scope: 'projects',
       search: options.query,
       per_page: pagination.perPage,
       page: pagination.page,
     };
     const response = await this.request(() =>
-      this.axios.get<GitLabProject[]>("/api/v4/search", {
+      this.axios.get<GitLabProject[]>('/api/v4/search', {
         params,
       }),
     );
@@ -834,12 +834,12 @@ export class GitLabClient {
     return baseUrl;
   }
 
-  createTagCreationUrl(projectPath: string, tagName: string, ref = "master"): string {
+  createTagCreationUrl(projectPath: string, tagName: string, ref = 'master'): string {
     const baseUrl = this.getBaseUrl();
     const url = new URL(`${projectPath}/-/tags/new`, baseUrl);
 
-    url.searchParams.set("tag_name", tagName);
-    url.searchParams.set("ref", ref);
+    url.searchParams.set('tag_name', tagName);
+    url.searchParams.set('ref', ref);
 
     const result = url.toString();
 
@@ -906,7 +906,7 @@ export class GitLabClient {
     }
 
     const response = await this.request(() =>
-      this.axios.get<GitLabUser[]>("/api/v4/users", {
+      this.axios.get<GitLabUser[]>('/api/v4/users', {
         params,
       }),
     );
@@ -921,7 +921,7 @@ export class GitLabClient {
   async getUser(userId: number | string): Promise<GitLabUser> {
     // GitLab API endpoint /api/v4/users/:id accepts only numeric ID
     // For username lookup, we need to use /api/v4/users?username=...
-    if (typeof userId === "number") {
+    if (typeof userId === 'number') {
       const response = await this.request(() => this.axios.get<GitLabUser>(`/api/v4/users/${userId}`));
       const user = response.data;
 
@@ -930,20 +930,19 @@ export class GitLabClient {
 
     // String parameter - treat as username
     const response = await this.request(() =>
-      this.axios.get<GitLabUser[]>("/api/v4/users", {
+      this.axios.get<GitLabUser[]>('/api/v4/users', {
         params: { username: userId },
       }),
     );
     const users = response.data;
+    const [user] = users;
 
-    if (!users.length) {
+    if (!user) {
       const error = new Error(`User not found: ${userId}`) as Error & { response?: { status: number } };
 
       error.response = { status: 404 };
       throw error;
     }
-
-    const user = users[0];
 
     return user;
   }
@@ -969,9 +968,9 @@ export class GitLabClient {
         try {
           const user = await this.getUser(userId);
 
-          results[index] = { status: "fulfilled", value: user } as const;
+          results[index] = { status: 'fulfilled', value: user } as const;
         } catch (e) {
-          results[index] = { status: "rejected", reason: e } as const;
+          results[index] = { status: 'rejected', reason: e } as const;
         }
       });
     });
@@ -982,19 +981,23 @@ export class GitLabClient {
     const notFound: Array<number | string> = [];
 
     for (const [index, result] of results.entries()) {
-      if (result.status === "fulfilled") {
+      if (result.status === 'fulfilled') {
         users.push(result.value);
         continue;
       }
 
       // rejected branch
       const error = result.reason as unknown;
+      // `index` is bounded by `results.length === userIds.length`, so the
+      // lookup is always defined; the non-null assertion silences the
+      // noUncheckedIndexedAccess narrowing without runtime cost.
+      const failedUserId = userIds[index]!;
 
-      if (error instanceof Error && "response" in error) {
+      if (error instanceof Error && 'response' in error) {
         const axiosError = error as AxiosError;
 
-        if (axiosError.response && axiosError.response.status === 404) {
-          notFound.push(userIds[index]);
+        if (axiosError.response?.status === 404) {
+          notFound.push(failedUserId);
         } else {
           throw error;
         }
@@ -1007,7 +1010,7 @@ export class GitLabClient {
   }
 
   async getCurrentUser(): Promise<GitLabCurrentUser> {
-    const response = await this.request(() => this.axios.get<GitLabCurrentUser>("/api/v4/user"));
+    const response = await this.request(() => this.axios.get<GitLabCurrentUser>('/api/v4/user'));
     const currentUser = response.data;
 
     return currentUser;
@@ -1018,7 +1021,7 @@ export class GitLabClient {
       perPage: options.perPage,
       page: options.page,
     });
-    const projectIdEncoded = typeof projectId === "number" ? projectId : encodeURIComponent(projectId);
+    const projectIdEncoded = typeof projectId === 'number' ? projectId : encodeURIComponent(projectId);
     const includeInherited = options.includeInherited ?? true;
     const endpoint = includeInherited ? `/api/v4/projects/${projectIdEncoded}/members/all` : `/api/v4/projects/${projectIdEncoded}/members`;
     const response = await this.request(() =>
@@ -1119,7 +1122,7 @@ export class GitLabClient {
       perPage: options.perPage,
       page: options.page,
     });
-    const groupIdEncoded = typeof groupId === "number" ? groupId : encodeURIComponent(groupId);
+    const groupIdEncoded = typeof groupId === 'number' ? groupId : encodeURIComponent(groupId);
     const includeInherited = options.includeInherited ?? true;
     const endpoint = includeInherited ? `/api/v4/groups/${groupIdEncoded}/members/all` : `/api/v4/groups/${groupIdEncoded}/members`;
     const response = await this.request(() =>
@@ -1340,12 +1343,12 @@ export class GitLabClient {
 
     const response = await this.request(() => this.axios.get<string>(
       `/api/v4/projects/${projectId}/jobs/${jobId}/trace`,
-      { headers, responseType: "text" as const },
+      { headers, responseType: 'text' as const },
     ));
     const { status, headers: respHeaders } = response;
     const normalized = this.normalizeHeaders(respHeaders);
-    const contentRange = normalized["content-range"];
-    const totalBytes = contentRange ? Number(contentRange.split("/")[1]) : undefined;
+    const contentRange = normalized['content-range'];
+    const totalBytes = contentRange ? Number(contentRange.split('/')[1]) : undefined;
     const partial = status === 206 || Boolean(contentRange);
 
     return {

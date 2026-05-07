@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import type { GitLabClient } from "../gitlab/index.js";
-import { mapUser } from "../mappers/gitlab.js";
-import { toolError, toolSuccess } from "../utils/tool-response.js";
+import type { GitLabClient } from '../gitlab/index.js';
+import { mapUser } from '../mappers/gitlab.js';
+import { toolError, toolSuccess } from '../utils/tool-response.js';
 
 export const gitlabCurrentUserArgs = {};
 
@@ -19,22 +19,22 @@ export async function gitlabCurrentUserHandler(client: GitLabClient, rawInput?: 
     const additionalInfo = [];
 
     if (currentUser.is_admin) {
-      additionalInfo.push("admin");
+      additionalInfo.push('admin');
     }
 
     if (currentUser.two_factor_enabled) {
-      additionalInfo.push("2FA enabled");
+      additionalInfo.push('2FA enabled');
     }
 
     if (currentUser.can_create_project) {
-      additionalInfo.push("can create projects");
+      additionalInfo.push('can create projects');
     }
 
     if (currentUser.can_create_group) {
-      additionalInfo.push("can create groups");
+      additionalInfo.push('can create groups');
     }
 
-    const infoText = additionalInfo.length ? ` (${additionalInfo.join(", ")})` : "";
+    const infoText = additionalInfo.length ? ` (${additionalInfo.join(', ')})` : '';
     const successResult = toolSuccess({
       payload: {
         user: {
@@ -47,7 +47,7 @@ export async function gitlabCurrentUserHandler(client: GitLabClient, rawInput?: 
         },
       },
       summary: `Current user: ${mapped.username} (${mapped.name})`,
-      fallbackText: `Current user: ${mapped.username} — ${mapped.name}${infoText}${mapped.webUrl ? ` → ${mapped.webUrl}` : ""}`,
+      fallbackText: `Current user: ${mapped.username} — ${mapped.name}${infoText}${mapped.webUrl ? ` → ${mapped.webUrl}` : ''}`,
     });
 
     return successResult;

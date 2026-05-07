@@ -1,4 +1,4 @@
-import { environmentSchema } from "./schemas.js";
+import { environmentSchema } from './schemas.js';
 
 export interface Config {
   gitlab: {
@@ -33,9 +33,9 @@ export function loadConfig(force = false): Config {
   }
 
   // Read read-only mode flag (default: true for safety)
-  const readOnly = process.env.GITLAB_READ_ONLY !== "false";
+  const readOnly = process.env.GITLAB_READ_ONLY !== 'false';
   // Response shaping flag: default true (structuredContent only). Treat only literal "false" as false.
-  const useStructuredContent = process.env.GITLAB_USE_STRUCTURED_CONTENT !== "false";
+  const useStructuredContent = process.env.GITLAB_USE_STRUCTURED_CONTENT !== 'false';
   const config = {
     gitlab: {
       url: envParsed.data.url,
@@ -46,7 +46,7 @@ export function loadConfig(force = false): Config {
       includeNamespaces: [],
     },
     readOnly,
-    timezone: envParsed.data.timezone ?? "Europe/Moscow",
+    timezone: envParsed.data.timezone ?? 'Europe/Moscow',
     useStructuredContent,
   } satisfies Config;
 

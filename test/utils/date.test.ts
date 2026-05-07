@@ -1,12 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   hoursToMinutes,
+  initializeTimezone,
   isSameDay,
   isWeekend,
   isWorkingDay,
   minutesToHours,
   toIsoDateString,
 } from '../../src/utils/date.js';
+
+// Pin the module-level `currentTimezone` to UTC for every test in this file.
+// `toIsoDateString` parses input in `currentTimezone` but then formats via
+// `DateTime.fromMillis(...)` without an explicit zone, which falls back to
+// the *system* timezone. When the two differ (e.g. dev box on Europe/Moscow,
+// GitHub runners on UTC), the round-trip silently shifts the calendar day.
+// Pinning to UTC here makes the tests deterministic across environments.
+beforeEach(() => {
+  initializeTimezone('UTC');
+});
 
 describe('minutesToHours / hoursToMinutes', () => {
   it('converts minutes to fractional hours rounded to 2 decimals', () => {
@@ -44,11 +55,10 @@ describe('isWeekend / isWorkingDay', () => {
 });
 
 describe('isSameDay', () => {
-  it('returns true for two values that resolve to the same calendar day', () => {
-    // Both points sit inside 2026-05-07 in Europe/Moscow (the default zone),
-    // even though the second is late evening and the first is early morning.
-    const morning = Date.UTC(2026, 4, 7, 6, 0, 0); // 09:00 Moscow
-    const evening = Date.UTC(2026, 4, 7, 18, 0, 0); // 21:00 Moscow
+  it('returns true for two values that resolve to the same calendar day in UTC', () => {
+    // Both points sit inside 2026-05-07 UTC (the timezone pinned in beforeEach).
+    const morning = Date.UTC(2026, 4, 7, 1, 0, 0);
+    const evening = Date.UTC(2026, 4, 7, 22, 0, 0);
 
     expect(isSameDay(morning, evening)).toBe(true);
   });

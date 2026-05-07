@@ -60,7 +60,7 @@
     "@vitalyostanin/mutex-pool": "^0.0.3",
     "axios": "^1.12.2",
     "luxon": "^3.7.2",
-    "p-retry": "^6.2.1",
+    "p-retry": "^8.0.0",
     "semver": "^7.6.3",
     "zod": "^4.4.3"
   },

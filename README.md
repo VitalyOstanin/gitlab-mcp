@@ -3,6 +3,7 @@
 Also available in Russian: [README-ru.md](README-ru.md)
 
 [![CI](https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/VitalyOstanin/gitlab-mcp/graph/badge.svg?branch=master)](https://codecov.io/gh/VitalyOstanin/gitlab-mcp)
 [![npm version](https://img.shields.io/npm/v/@vitalyostanin/gitlab-mcp.svg)](https://www.npmjs.com/package/@vitalyostanin/gitlab-mcp)
 
 GitLab MCP server provides tools for working with GitLab projects, merge requests, and tags directly from Claude Code, Code CLI, and other MCP clients.

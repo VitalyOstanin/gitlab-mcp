@@ -1,5 +1,11 @@
 # GitLab MCP Server
 
+Также доступно на английском: [README.md](README.md)
+
+[![CI](https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/VitalyOstanin/gitlab-mcp/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/VitalyOstanin/gitlab-mcp/graph/badge.svg?branch=master)](https://codecov.io/gh/VitalyOstanin/gitlab-mcp)
+[![npm version](https://img.shields.io/npm/v/@vitalyostanin/gitlab-mcp.svg)](https://www.npmjs.com/package/@vitalyostanin/gitlab-mcp)
+
 GitLab MCP — сервер Model Context Protocol, который предоставляет инструменты для работы с проектами GitLab, merge-request'ами и тегами непосредственно из Claude Code, Code CLI и других MCP-клиентов.
 
 ## Содержание

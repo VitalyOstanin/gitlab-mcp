@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
-- [Unreleased](#unreleased)
+- [0.5.0] - 2026-05-07
 - [0.4.0] - 2025-10-21
 - [0.3.0] - 2025-10-19
 - [0.2.0] - 2025-10-18
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
 
-## Unreleased
+## [0.5.0] - 2026-05-07
 
 ### Changed
 - Modernized toolchain: TypeScript 6, ESLint 10 (flat config + `projectService`), Zod 4, `@modelcontextprotocol/sdk` 1.29, Vitest 4 + `@vitest/coverage-v8` for unit tests, `eslint-config-flat-gitignore` instead of repeated ignore blocks.
@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tsconfig.eslint.json` (replaced by ESLint `projectService`).
 - `.npmignore` (the `files` allow-list in `package.json` is the single source of truth for published artefacts).
 - Unused `zod-to-json-schema` devDependency.
+
+### Tests
+- Stabilize the starter `src/utils/date.ts` tests across timezones: the round-trip in `toIsoDateString` parses via `currentTimezone` (default `Europe/Moscow`) but formats via the system zone, which silently shifted the calendar day on UTC runners. Pinned `currentTimezone` to UTC in a `beforeEach` so the assertions hold both on the dev box and in GitHub Actions.
+- Coverage thresholds set to a low 1/1/1/1 floor while the test surface is just `src/utils/date.ts`. Real baseline: statements 2.17%, lines 2.25%, branches 1.18%, functions 4.5%. Raise as new test files for mappers / gitlab-version / tool-response land.
 
 ## [0.4.0] - 2025-10-21
 

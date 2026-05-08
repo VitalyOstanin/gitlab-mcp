@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.6.0] - 2026-05-08
 - [0.5.1] - 2026-05-07
 - [0.5.0] - 2026-05-07
 - [0.4.0] - 2025-10-21
@@ -16,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.6.0] - 2026-05-08
+
+### Added
+- `mapMergeRequest` now exposes `sha`, `mergeCommitSha`, and `squashCommitSha` (camelCase versions of the GitLab REST fields `sha`, `merge_commit_sha`, `squash_commit_sha`). They flow into responses of `gitlab_merge_requests`, `gitlab_merge_request_details`, and `gitlab_merge_requests_search`. This closes a gap where finding the merge commit hash for a merged MR previously required a second `gitlab_commits` call to scan `master` and match by date — now it is one field on the MR itself.
+- Test suite `test/mappers/gitlab.test.ts` covering the new SHA fields (regular merge, squash merge, missing fields, existing field passthrough).
 
 ## [0.5.1] - 2026-05-07
 

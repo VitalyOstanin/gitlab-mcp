@@ -69,6 +69,9 @@ export interface GitLabMergeRequest {
   merged_at: string | null;
   source_branch: string;
   target_branch: string;
+  sha?: string | null;
+  merge_commit_sha?: string | null;
+  squash_commit_sha?: string | null;
   author: {
     name: string;
     username: string;

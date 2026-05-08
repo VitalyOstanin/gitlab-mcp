@@ -124,6 +124,9 @@ export interface MappedMergeRequest {
   mergedAt?: string | null;
   sourceBranch: string;
   targetBranch: string;
+  sha?: string | null;
+  mergeCommitSha?: string | null;
+  squashCommitSha?: string | null;
   author?: GitLabMergeRequest['author'];
   assignee?: GitLabMergeRequest['assignee'] | null;
   description?: string | null;
@@ -266,6 +269,9 @@ export function mapMergeRequest(mr: GitLabMergeRequest): MappedMergeRequest {
     mergedAt: formatDatetime(mr.merged_at) ?? mr.merged_at,
     sourceBranch: mr.source_branch,
     targetBranch: mr.target_branch,
+    sha: mr.sha,
+    mergeCommitSha: mr.merge_commit_sha,
+    squashCommitSha: mr.squash_commit_sha,
     author: mr.author,
     assignee: mr.assignee,
     description: mr.description,

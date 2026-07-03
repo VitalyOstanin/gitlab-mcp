@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [0.6.1] - 2026-07-03
 - [0.6.0] - 2026-05-08
 - [0.5.1] - 2026-05-07
 - [0.5.0] - 2026-05-07
@@ -17,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [0.1.2] - 2025-10-16
 - [0.1.1] - 2025-10-14
 - [0.1.0] - 2025-10-12
+
+## [0.6.1] - 2026-07-03
+
+### Changed
+- Dependency maintenance: bumped runtime and dev dependencies to latest (`axios` 1.18.1, `semver` 7.8.5, plus `eslint` / `vitest` / `typescript-eslint` / `@types/node` 26). Cleared high-severity npm advisories via lockfile updates. No change to the server's own API or behavior.
+- CI: bumped `actions/checkout` to v7 and `codecov/codecov-action` to v7.
 
 ## [0.6.0] - 2026-05-08
 
